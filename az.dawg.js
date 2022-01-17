@@ -357,7 +357,7 @@ DAWG.fromArrayBuffer = function (data, format) {
 }
 
 DAWG.load = function (url, format, callback) {
-    Az.load(url, 'arraybuffer', function (err, data) {
+    Az.load(url, 'arrayBuffer', function (data, err) {
         callback(err, err ? null : DAWG.fromArrayBuffer(data, format));
     });
 }

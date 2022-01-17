@@ -1077,7 +1077,7 @@ Morph.init = function (path, callback) {
     });
 
     loading++;
-    Az.load(path + '/grammemes.json', 'json', function (err, json) {
+    Az.load(path + '/grammemes.json', 'json', function (json, err) {
         if (err) {
             callback(err);
             return;
@@ -1095,7 +1095,7 @@ Morph.init = function (path, callback) {
     });
 
     loading++;
-    Az.load(path + '/gramtab-opencorpora-int.json', 'json', function (err, json) {
+    Az.load(path + '/gramtab-opencorpora-int.json', 'json', function (json, err) {
         if (err) {
             callback(err);
             return;
@@ -1105,7 +1105,7 @@ Morph.init = function (path, callback) {
     });
 
     loading++;
-    Az.load(path + '/gramtab-opencorpora-ext.json', 'json', function (err, json) {
+    Az.load(path + '/gramtab-opencorpora-ext.json', 'json', function (json, err) {
         if (err) {
             callback(err);
             return;
@@ -1115,7 +1115,7 @@ Morph.init = function (path, callback) {
     });
 
     loading++;
-    Az.load(path + '/suffixes.json', 'json', function (err, json) {
+    Az.load(path + '/suffixes.json', 'json', function (json, err) {
         if (err) {
             callback(err);
             return;
@@ -1125,7 +1125,7 @@ Morph.init = function (path, callback) {
     });
 
     loading++;
-    Az.load(path + '/paradigms.array', 'arraybuffer', function (err, data) {
+    Az.load(path + '/paradigms.array', 'arrayBuffer', function (data, err) {
         if (err) {
             callback(err);
             return;
