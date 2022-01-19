@@ -8,12 +8,14 @@ export const Az = {
             .then(callback);
     },
     extend: function () {
-        var result = {};
-        for (var i = 0; i < arguments.length; i++) {
-            for (var key in arguments[i]) {
+        const result = {};
+
+        for (let i = 0; i < arguments.length; i++) {
+            for (const key in arguments[i]) {
                 result[key] = arguments[i][key];
             }
         }
+
         return result;
     },
     DAWG,

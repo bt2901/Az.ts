@@ -1,15 +1,15 @@
 import { Az } from './az';
 
 /** @namespace Az **/
-var words,
-    probabilities,
-    predictionSuffixes = new Array(3),
-    prefixes = ['', 'по', 'наи'],
-    suffixes,
-    grammemes,
-    paradigms,
-    tags,
-    defaults = {
+let words;
+let probabilities;
+let predictionSuffixes = new Array(3);
+let prefixes = ['', 'по', 'наи'];
+let suffixes;
+let grammemes;
+let paradigms;
+let tags;
+let defaults = {
         ignoreCase: false,
         replacements: { 'е': 'ё' },
         stutter: Infinity,
@@ -43,11 +43,11 @@ var words,
         'радио', 'разно', 'ре', 'ретро', 'ретро-', 'само', 'санти', 'сверх', 'сверх-', 'спец', 'суб', 'супер', 'супер-', 'супра',
         'теле', 'тетра', 'топ-', 'транс', 'транс-', 'ультра', 'унтер-', 'штаб-',
         'экзо', 'эко', 'эндо', 'эконом-', 'экс', 'экс-', 'экстра', 'экстра-', 'электро', 'энерго', 'этно'
-    ],
-    autoTypos = [4, 9],
-    UNKN,
-    __init = [],
-    initialized = false;
+    ];
+const autoTypos = [4, 9];
+let UNKN;
+const __init = [];
+let initialized = false;
 
 // Взято из https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze
 function deepFreeze(obj) {
@@ -452,6 +452,7 @@ function lookup(dawg, word, config) {
     } else {
         entries = dawg.findAll(word, config.replacements, config.stutter, config.typos);
     }
+    console.log('lookup', word, config, entries)
     return entries;
 }
 
@@ -471,6 +472,7 @@ var DictionaryParse = function (word, paradigmIdx, formIdx, stutterCnt, typosCnt
     this.score = getDictionaryScore(this.stutterCnt, this.typosCnt);
     this.prefix = prefix || '';
     this.suffix = suffix || '';
+    console.log('DictionaryParse', this);
 }
 
 DictionaryParse.prototype = Object.create(Parse.prototype);
@@ -1049,6 +1051,7 @@ Morph.init = function (path, callback) {
             return;
         }
         words = dawg;
+        console.log('words.dawg', dawg);
         loaded();
     });
 
@@ -1061,6 +1064,7 @@ Morph.init = function (path, callback) {
                     return;
                 }
                 predictionSuffixes[prefix] = dawg;
+                console.log('/prediction-suffixes-' + prefix + '.dawg', dawg);
                 loaded();
             });
         })(prefix);
@@ -1073,6 +1077,7 @@ Morph.init = function (path, callback) {
             return;
         }
         probabilities = dawg;
+        console.log('p_t_given_w.intdawg', dawg);
         loaded();
     });
 
@@ -1141,6 +1146,7 @@ Morph.init = function (path, callback) {
             paradigms.push(list.subarray(pos, pos + size));
             pos += size;
         }
+        console.log('paradigms', paradigms);
         loaded();
     });
 }

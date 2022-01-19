@@ -1,14 +1,14 @@
 import { Az } from './az';
 
-var ROOT = 0,
-    MISSING = -1,
-    PRECISION_MASK = 0xFFFFFFFF,
-    HAS_LEAF_BIT = 1 << 8,
-    EXTENSION_BIT = 1 << 9,
-    OFFSET_MAX = 1 << 21,
-    IS_LEAF_BIT = 1 << 31;
+const ROOT = 0;
+const MISSING = -1;
+const PRECISION_MASK = 0xFFFFFFFF;
+const HAS_LEAF_BIT = 1 << 8;
+const EXTENSION_BIT = 1 << 9;
+const OFFSET_MAX = 1 << 21;
+const IS_LEAF_BIT = 1 << 31;
 
-var CP1251 = {
+const CP1251 = {
     0: 0,
     1: 1,
     2: 2,
@@ -266,15 +266,16 @@ var CP1251 = {
     1109: 190
 };
 
-var UCS2 = {};
-for (var k in CP1251) {
+const UCS2 = {};
+
+for (const k in CP1251) {
     UCS2[CP1251[k]] = String.fromCharCode(k);
     delete UCS2[0];
     delete UCS2[1];
 }
 
 // Based on all common ЙЦУКЕН-keyboards (both Windows and Apple variations)
-var COMMON_TYPOS = {
+const COMMON_TYPOS = {
     'й': 'иёцыф',
     'ц': 'йфыву',
     'у': 'цывак',
@@ -347,24 +348,26 @@ export const DAWG = function (units, guide, format) {
 }
 
 DAWG.fromArrayBuffer = function (data, format) {
-    var dv = new DataView(data),
-        unitsLength = dv.getUint32(0, true),
-        guideLength = dv.getUint32(unitsLength * 4 + 4, true);
+    const dv = new DataView(data);
+    const unitsLength = dv.getUint32(0, true);
+    const guideLength = dv.getUint32(unitsLength * 4 + 4, true);
+
     return new DAWG(
         new Uint32Array(data, 4, unitsLength),
         new Uint8Array(data, unitsLength * 4 + 8, guideLength * 2),
-        format);
+        format,
+    );
 }
 
 DAWG.load = function (url, format, callback) {
-    Az.load(url, 'arrayBuffer', function (data, err) {
+    Az.load(url, 'arrayBuffer', (data, err) => {
         callback(err, err ? null : DAWG.fromArrayBuffer(data, format));
     });
 }
 
 DAWG.prototype.followByte = function (c, index) {
-    var o = offset(this.units[index]);
-    var nextIndex = (index ^ o ^ (c & 0xFF)) & PRECISION_MASK;
+    const o = offset(this.units[index]);
+    const nextIndex = (index ^ o ^ (c & 0xFF)) & PRECISION_MASK;
 
     if (label(this.units[nextIndex]) != (c & 0xFF)) {
         return MISSING;
@@ -375,12 +378,16 @@ DAWG.prototype.followByte = function (c, index) {
 
 DAWG.prototype.followString = function (str, index) {
     index = index || ROOT;
-    for (var i = 0; i < str.length; i++) {
-        var code = str.charCodeAt(i);
+
+    for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+
         if (!(code in CP1251)) {
             return MISSING;
         }
+
         index = this.followByte(CP1251[code], index);
+
         if (index == MISSING) {
             return MISSING;
         }
@@ -393,28 +400,32 @@ DAWG.prototype.hasValue = function (index) {
 }
 
 DAWG.prototype.value = function (index) {
-    var o = offset(this.units[index]);
-    var valueIndex = (index ^ o) & PRECISION_MASK;
+    const o = offset(this.units[index]);
+    const valueIndex = (index ^ o) & PRECISION_MASK;
+
     return value(this.units[valueIndex]);
 }
 
 DAWG.prototype.find = function (str) {
-    var index = this.followString(str);
+    const index = this.followString(str);
+
     if (index == MISSING) {
         return MISSING;
     }
+
     if (!this.hasValue(index)) {
         return MISSING;
     }
+
     return this.value(index);
 }
 
 DAWG.prototype.iterateAll = function (index) {
-    var results = [];
-    var stack = [index];
-    var key = [];
-    var last = ROOT;
-    var label;
+    const results = [];
+    const stack = [index];
+    const key = [];
+    let last = ROOT;
+    let label;
 
     while (true) {
         index = stack[stack.length - 1];
@@ -450,7 +461,7 @@ DAWG.prototype.iterateAll = function (index) {
         }
 
         while (!this.hasValue(index)) {
-            var label = this.guide[index << 1];
+            const label = this.guide[index << 1];
             index = this.followByte(label, index);
             if (index == MISSING) {
                 return results;
@@ -487,12 +498,18 @@ DAWG.prototype.iterateAll = function (index) {
 //    extra letters (свлово -> слово)
 //    missing letters (сово -> слово)
 //    wrong letters (сково -> слово)
-DAWG.prototype.findAll = function (str, replaces, mstutter, mtypos) {
-    mtypos = mtypos || 0;
-    mstutter = mstutter || 0;
-    var results = [],
-        prefixes = [['', 0, 0, 0, ROOT]],
-        prefix, index, len, code, cur, typos, stutter;
+DAWG.prototype.findAll = function (str, replaces, mstutter = 0, mtypos = 0) {
+    const results = [];
+    const prefixes = [['', 0, 0, 0, ROOT]];
+    let prefix
+    let index;
+    let len;
+    let code;
+    let cur;
+    let typos;
+    let stutter;
+    console.log('findAll', str);
+    debugger;
 
     while (prefixes.length) {
         prefix = prefixes.pop();
@@ -502,7 +519,7 @@ DAWG.prototype.findAll = function (str, replaces, mstutter, mtypos) {
         if (len == str.length) {
             if (typos < mtypos && stutter <= mstutter) {
                 // Allow missing letter(s) at the very end
-                var label = this.guide[index << 1]; // First child
+                let label = this.guide[index << 1]; // First child
                 do {
                     cur = this.followByte(label, index);
                     if ((cur != MISSING) && (label in UCS2)) {
@@ -547,7 +564,7 @@ DAWG.prototype.findAll = function (str, replaces, mstutter, mtypos) {
 
             // Add a letter (missing)
             // TODO: iterate all childs?
-            var label = this.guide[index << 1]; // First child
+            let label = this.guide[index << 1]; // First child
             do {
                 cur = this.followByte(label, index);
                 if ((cur != MISSING) && (label in UCS2)) {
@@ -558,9 +575,9 @@ DAWG.prototype.findAll = function (str, replaces, mstutter, mtypos) {
 
             // Replace a letter
             // Now it checks only most probable typos (located near to each other on keyboards)
-            var possible = COMMON_TYPOS[str[len]];
+            const possible = COMMON_TYPOS[str[len]];
             if (possible) {
-                for (var i = 0; i < possible.length; i++) {
+                for (let i = 0; i < possible.length; i++) {
                     code = possible.charCodeAt(i);
                     if (code in CP1251) {
                         cur = this.followByte(CP1251[code], index);
