@@ -452,7 +452,6 @@ function lookup(dawg, word, config) {
     } else {
         entries = dawg.findAll(word, config.replacements, config.stutter, config.typos);
     }
-    console.log('lookup', word, config, entries)
     return entries;
 }
 
@@ -472,7 +471,6 @@ var DictionaryParse = function (word, paradigmIdx, formIdx, stutterCnt, typosCnt
     this.score = getDictionaryScore(this.stutterCnt, this.typosCnt);
     this.prefix = prefix || '';
     this.suffix = suffix || '';
-    console.log('DictionaryParse', this);
 }
 
 DictionaryParse.prototype = Object.create(Parse.prototype);
@@ -1051,7 +1049,6 @@ Morph.init = function (path, callback) {
             return;
         }
         words = dawg;
-        console.log('words.dawg', dawg);
         loaded();
     });
 
@@ -1064,7 +1061,6 @@ Morph.init = function (path, callback) {
                     return;
                 }
                 predictionSuffixes[prefix] = dawg;
-                console.log('/prediction-suffixes-' + prefix + '.dawg', dawg);
                 loaded();
             });
         })(prefix);
@@ -1077,7 +1073,6 @@ Morph.init = function (path, callback) {
             return;
         }
         probabilities = dawg;
-        console.log('p_t_given_w.intdawg', dawg);
         loaded();
     });
 
@@ -1146,7 +1141,6 @@ Morph.init = function (path, callback) {
             paradigms.push(list.subarray(pos, pos + size));
             pos += size;
         }
-        console.log('paradigms', paradigms);
         loaded();
     });
 }

@@ -266,10 +266,18 @@ const CP1251 = {
     1109: 190
 };
 
+function hasCP1251(code) {
+    return code in CP1251;
+}
+
+function getCP1251(code) {
+    return CP1251[code];
+}
+
 const UCS2 = {};
 
 for (const k in CP1251) {
-    UCS2[CP1251[k]] = String.fromCharCode(k);
+    UCS2[getCP1251(k)] = String.fromCharCode(k);
     delete UCS2[0];
     delete UCS2[1];
 }
@@ -382,11 +390,11 @@ DAWG.prototype.followString = function (str, index) {
     for (let i = 0; i < str.length; i++) {
         const code = str.charCodeAt(i);
 
-        if (!(code in CP1251)) {
+        if (!(hasCP1251(code))) {
             return MISSING;
         }
 
-        index = this.followByte(CP1251[code], index);
+        index = this.followByte(getCP1251(code), index);
 
         if (index == MISSING) {
             return MISSING;
@@ -508,8 +516,6 @@ DAWG.prototype.findAll = function (str, replaces, mstutter = 0, mtypos = 0) {
     let cur;
     let typos;
     let stutter;
-    console.log('findAll', str);
-    debugger;
 
     while (prefixes.length) {
         prefix = prefixes.pop();
@@ -549,8 +555,8 @@ DAWG.prototype.findAll = function (str, replaces, mstutter = 0, mtypos = 0) {
         // Follow a replacement path
         if (replaces && str[len] in replaces) {
             code = replaces[str[len]].charCodeAt(0);
-            if (code in CP1251) {
-                cur = this.followByte(CP1251[code], index);
+            if (hasCP1251(code)) {
+                cur = this.followByte(getCP1251(code), index);
                 if (cur != MISSING) {
                     prefixes.push([prefix + replaces[str[len]], len + 1, typos, stutter, cur]);
                 }
@@ -579,8 +585,8 @@ DAWG.prototype.findAll = function (str, replaces, mstutter = 0, mtypos = 0) {
             if (possible) {
                 for (let i = 0; i < possible.length; i++) {
                     code = possible.charCodeAt(i);
-                    if (code in CP1251) {
-                        cur = this.followByte(CP1251[code], index);
+                    if (hasCP1251(code)) {
+                        cur = this.followByte(getCP1251(code), index);
                         if (cur != MISSING) {
                             // for missing letter we need to iterate all childs, not only COMMON_TYPOS
                             // prefixes.push([ prefix + possible[i], len, typos + 1, stutter, cur ]);
@@ -594,12 +600,12 @@ DAWG.prototype.findAll = function (str, replaces, mstutter = 0, mtypos = 0) {
             // TODO: support for replacements?
             if (len < str.length - 1) {
                 code = str.charCodeAt(len + 1);
-                if (code in CP1251) {
-                    cur = this.followByte(CP1251[code], index);
+                if (hasCP1251(code)) {
+                    cur = this.followByte(getCP1251(code), index);
                     if (cur != MISSING) {
                         code = str.charCodeAt(len);
-                        if (code in CP1251) {
-                            cur = this.followByte(CP1251[code], cur);
+                        if (hasCP1251(code)) {
+                            cur = this.followByte(getCP1251(code), cur);
                             if (cur != MISSING) {
                                 prefixes.push([prefix + str[len + 1] + str[len], len + 2, typos + 1, stutter, cur]);
                             }
@@ -611,8 +617,8 @@ DAWG.prototype.findAll = function (str, replaces, mstutter = 0, mtypos = 0) {
 
         // Follow base path
         code = str.charCodeAt(len);
-        if (code in CP1251) {
-            cur = this.followByte(CP1251[code], index);
+        if (hasCP1251(code)) {
+            cur = this.followByte(getCP1251(code), index);
             if (cur != MISSING) {
                 prefixes.push([prefix + str[len], len + 1, typos, stutter, cur]);
 
