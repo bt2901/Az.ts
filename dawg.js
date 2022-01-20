@@ -1,5 +1,3 @@
-import { Az } from './az';
-
 const ROOT = 0;
 const MISSING = -1;
 const PRECISION_MASK = 0xFFFFFFFF;
@@ -349,28 +347,14 @@ function value(base) {
     return base & ~IS_LEAF_BIT & PRECISION_MASK;
 }
 
-export const DAWG = function (units, guide, format) {
-    this.units = units;
-    this.guide = guide;
-    this.format = format;
-}
-
-DAWG.fromArrayBuffer = function (data, format) {
+export function DAWG(data, format) {
     const dv = new DataView(data);
     const unitsLength = dv.getUint32(0, true);
     const guideLength = dv.getUint32(unitsLength * 4 + 4, true);
 
-    return new DAWG(
-        new Uint32Array(data, 4, unitsLength),
-        new Uint8Array(data, unitsLength * 4 + 8, guideLength * 2),
-        format,
-    );
-}
-
-DAWG.load = function (url, format, callback) {
-    Az.load(url, 'arrayBuffer', (data, err) => {
-        callback(err, err ? null : DAWG.fromArrayBuffer(data, format));
-    });
+    this.units = new Uint32Array(data, 4, unitsLength);
+    this.guide = new Uint8Array(data, unitsLength * 4 + 8, guideLength * 2);
+    this.format = format;
 }
 
 DAWG.prototype.followByte = function (c, index) {

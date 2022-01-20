@@ -1,8 +1,8 @@
-import { Az } from './az';
+import { DAWG } from './dawg';
 import { Tag } from './tag';
 import { Parse } from './parse';
 
-/** @namespace Az **/
+/** @namespace Index **/
 let words;
 let probabilities;
 let predictionSuffixes = new Array(3);
@@ -135,7 +135,7 @@ export const Morph = function (word, config) {
         throw new Error('Please call Az.Morph.init() before using this module.');
     }
 
-    config = config ? Az.extend(defaults, config) : defaults;
+    config = config ? Object.assign(defaults, config) : defaults;
 
     var parses = [];
     var matched = false;
@@ -773,144 +773,59 @@ Morph.setDefaults = function (config) {
     defaults = config;
 }
 
-/**
- * Инициализирует анализатор, загружая необходимые для работы словари из
- * указанной директории. Эту функцию необходимо вызвать (и дождаться
- * срабатывания коллбэка) до любых действий с модулем.
- *
- * @param {string} [path] Директория, содержащая файлы 'words.dawg',
- * 'grammemes.json' и т.д. По умолчанию директория 'dicts' в данном модуле.
- * @param {Function} callback Коллбэк, вызываемый после завершения загрузки
- *  всех словарей.
- */
-Morph.init = function (path, callback) {
-    var loading = 0;
-    var tagsInt, tagsExt;
+Morph.init = function (files) {
+    let tagsInt;
+    let tagsExt;
 
-    function loaded() {
-        if (!--loading) {
-            tags = Array(tagsInt.length);
-            for (var i = 0; i < tagsInt.length; i++) {
-                tags[i] = new Tag(grammemes, tagsInt[i]);
-                tags[i].ext = new Tag(grammemes, tagsExt[i]);
-            }
-            tags = deepFreeze(tags);
-            for (var i = 0; i < __init.length; i++) {
-                __init[i]();
-            }
-            initialized = true;
-            callback && callback(null, Morph);
+    words = new DAWG(files['words.dawg'], 'words');
+
+    for (let prefix = 0; prefix < 3; prefix++) {
+        predictionSuffixes[prefix] = new DAWG(files[`prediction-suffixes-${prefix}.dawg`], 'probs');
+    }
+
+    probabilities = new DAWG(files['p_t_given_w.intdawg'], 'int');
+
+    grammemes = {};
+    const grammemesJson = files['grammemes.json']
+    for (let i = 0; i < grammemesJson.length; i++) {
+        grammemes[grammemesJson[i][0]] = grammemes[grammemesJson[i][2]] = {
+            parent: grammemesJson[i][1],
+            internal: grammemesJson[i][0],
+            external: grammemesJson[i][2],
+            externalFull: grammemesJson[i][3]
         }
     }
 
-    if (!callback && typeof path == 'function') {
-        callback = path;
-        if (typeof __dirname == 'string') {
-            path = __dirname + '/../dicts';
-        } else {
-            path = 'dicts';
-        }
+    tagsInt = files['gramtab-opencorpora-int.json'];
+    tagsExt = files['gramtab-opencorpora-ext.json'];
+
+    tags = Array(tagsInt.length);
+
+    for (let i = 0; i < tagsInt.length; i++) {
+        tags[i] = new Tag(grammemes, tagsInt[i]);
+        tags[i].ext = new Tag(grammemes, tagsExt[i]);
     }
 
-    loading++;
-    Az.DAWG.load(path + '/words.dawg', 'words', function (err, dawg) {
-        if (err) {
-            callback(err);
-            return;
-        }
-        words = dawg;
-        loaded();
-    });
+    tags = deepFreeze(tags);
 
-    for (var prefix = 0; prefix < 3; prefix++) {
-        (function (prefix) {
-            loading++;
-            Az.DAWG.load(path + '/prediction-suffixes-' + prefix + '.dawg', 'probs', function (err, dawg) {
-                if (err) {
-                    callback(err);
-                    return;
-                }
-                predictionSuffixes[prefix] = dawg;
-                loaded();
-            });
-        })(prefix);
+    suffixes = files['suffixes.json'];
+
+    const list = new Uint16Array(files['paradigms.array']);
+    const count = list[0];
+    let pos = 1;
+
+    paradigms = [];
+    for (let i = 0; i < count; i++) {
+        const size = list[pos++];
+
+        paradigms.push(list.subarray(pos, pos + size));
+        pos += size;
     }
 
-    loading++;
-    Az.DAWG.load(path + '/p_t_given_w.intdawg', 'int', function (err, dawg) {
-        if (err) {
-            callback(err);
-            return;
-        }
-        probabilities = dawg;
-        loaded();
-    });
+    for (let i = 0; i < __init.length; i++) {
+        __init[i]();
+    }
 
-    loading++;
-    Az.load(path + '/grammemes.json', 'json', function (json, err) {
-        if (err) {
-            callback(err);
-            return;
-        }
-        grammemes = {};
-        for (var i = 0; i < json.length; i++) {
-            grammemes[json[i][0]] = grammemes[json[i][2]] = {
-                parent: json[i][1],
-                internal: json[i][0],
-                external: json[i][2],
-                externalFull: json[i][3]
-            }
-        }
-        loaded();
-    });
-
-    loading++;
-    Az.load(path + '/gramtab-opencorpora-int.json', 'json', function (json, err) {
-        if (err) {
-            callback(err);
-            return;
-        }
-        tagsInt = json;
-        loaded();
-    });
-
-    loading++;
-    Az.load(path + '/gramtab-opencorpora-ext.json', 'json', function (json, err) {
-        if (err) {
-            callback(err);
-            return;
-        }
-        tagsExt = json;
-        loaded();
-    });
-
-    loading++;
-    Az.load(path + '/suffixes.json', 'json', function (json, err) {
-        if (err) {
-            callback(err);
-            return;
-        }
-        suffixes = json;
-        loaded();
-    });
-
-    loading++;
-    Az.load(path + '/paradigms.array', 'arrayBuffer', function (data, err) {
-        if (err) {
-            callback(err);
-            return;
-        }
-
-        var list = new Uint16Array(data),
-            count = list[0],
-            pos = 1;
-
-        paradigms = [];
-        for (var i = 0; i < count; i++) {
-            var size = list[pos++];
-            paradigms.push(list.subarray(pos, pos + size));
-            pos += size;
-        }
-        loaded();
-    });
+    initialized = true;
 }
+
