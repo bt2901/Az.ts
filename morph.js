@@ -1,4 +1,6 @@
 import { Az } from './az';
+import { Tag } from './tag';
+import { Parse } from './parse';
 
 /** @namespace Az **/
 let words;
@@ -49,6 +51,13 @@ let UNKN;
 const __init = [];
 let initialized = false;
 
+
+export function makeTag(tagInt, tagExt) {
+    var tag = new Tag(grammemes, tagInt);
+    tag.ext = new Tag(grammemes, tagExt);
+    return deepFreeze(tag);
+}
+
 // Взято из https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze
 function deepFreeze(obj) {
     if (!('freeze' in Object)) {
@@ -64,131 +73,6 @@ function deepFreeze(obj) {
     });
 
     return Object.freeze(obj);
-}
-
-/**
- * Тег. Содержит в себе информацию о конкретной форме слова, но при этом
- * к конкретному слову не привязан. Всевозможные значения тегов переиспользуются
- * для всех разборов слов.
- *
- * Все граммемы навешаны на тег как поля. Если какая-то граммема содержит в себе
- * дочерние граммемы, то значением поля является именно название дочерней
- * граммемы (например, tag.GNdr == 'masc'). В то же время для дочерних граммем
- * значением является просто true (т.е. условие можно писать и просто как
- * if (tag.masc) ...).
- *
- * @property {string[]} stat Полный список неизменяемых граммем.
- * @property {string[]} flex Полный список изменяемых граммем.
- * @property {Tag} ext Копия тега с русскими обозначениями (по версии OpenCorpora).
- */
-var Tag = function (str) {
-    var par, pair = str.split(' ');
-    this.stat = pair[0].split(',');
-    this.flex = pair[1] ? pair[1].split(',') : [];
-    for (var j = 0; j < 2; j++) {
-        var grams = this[['stat', 'flex'][j]];
-        for (var i = 0; i < grams.length; i++) {
-            var gram = grams[i];
-            this[gram] = true;
-            // loc2 -> loct -> CAse
-            while (grammemes[gram] && (par = grammemes[gram].parent)) {
-                this[par] = gram;
-                gram = par;
-            }
-        }
-    }
-    if ('POST' in this) {
-        this.POS = this.POST;
-    }
-}
-
-/**
- * Возвращает текстовое представление тега.
- *
- * @returns {string} Список неизменяемых граммем через запятую, пробел,
- *  и список изменяемых граммем через запятую.
- */
-Tag.prototype.toString = function () {
-    return (this.stat.join(',') + ' ' + this.flex.join(',')).trim();
-}
-
-/**
- * Проверяет согласованность с конкретными значениями граммем либо со списком
- * граммем из другого тега (или слова).
- *
- * @param {Tag|Parse} [tag] Тег или разбор слова, с которым следует
- *  проверить согласованность.
- * @param {Array|Object} grammemes Граммемы, по которым нужно проверить
- *  согласованность.
- *
- *  Если указан тег (или разбор), то grammemes должен быть массивом тех
- *  граммем, которые у обоих тегов должны совпадать. Например:
- *  tag.matches(otherTag, ['POS', 'GNdr'])
- *
- *  Если тег не указан, а указан массив граммем, то проверяется просто их
- *  наличие. Например, аналог выражения (tag.NOUN && tag.masc):
- *  tag.matches([ 'NOUN', 'masc' ])
- *
- *  Если тег не указан, а указан объект, то ключи в нем — названия граммем,
- *  значения — дочерние граммемы, массивы граммем, либо true/false:
- *  tag.matches({ 'POS' : 'NOUN', 'GNdr': ['masc', 'neut'] })
- * @returns {boolean} Является ли текущий тег согласованным с указанным.
- */
-// TODO: научиться понимать, что некоторые граммемы можно считать эквивалентными при сравнении двух тегов (вариации падежей и т.п.)
-Tag.prototype.matches = function (tag, grammemes) {
-    if (!grammemes) {
-        if (Object.prototype.toString.call(tag) === '[object Array]') {
-            for (var i = 0; i < tag.length; i++) {
-                if (!this[tag[i]]) {
-                    return false;
-                }
-            }
-            return true;
-        } else
-            // Match to map
-            for (var k in tag) {
-                if (Object.prototype.toString.call(tag[k]) === '[object Array]') {
-                    if (!tag[k].indexOf(this[k])) {
-                        return false;
-                    }
-                } else {
-                    if (tag[k] != this[k]) {
-                        return false;
-                    }
-                }
-            }
-        return true;
-    }
-
-    if (tag instanceof Parse) {
-        tag = tag.tag;
-    }
-
-    // Match to another tag
-    for (var i = 0; i < grammemes.length; i++) {
-        if (tag[grammemes[i]] != this[grammemes[i]]) {
-            // Special case: tag.CAse
-            return false;
-        }
-    }
-    return true;
-}
-
-Tag.prototype.isProductive = function () {
-    return !(this.NUMR || this.NPRO || this.PRED || this.PREP ||
-        this.CONJ || this.PRCL || this.INTJ || this.Apro ||
-        this.NUMB || this.ROMN || this.LATN || this.PNCT ||
-        this.UNKN);
-}
-
-Tag.prototype.isCapitalized = function () {
-    return this.Name || this.Surn || this.Patr || this.Geox || this.Init;
-}
-
-function makeTag(tagInt, tagExt) {
-    var tag = new Tag(tagInt);
-    tag.ext = new Tag(tagExt);
-    return deepFreeze(tag);
 }
 
 /**
@@ -327,120 +211,6 @@ export const Morph = function (word, config) {
 // TODO: вынести парсеры в отдельный файл(ы)?
 
 Morph.Parsers = {}
-
-/**
- * Один из возможных вариантов морфологического разбора.
- *
- * @property {string} word Слово в текущей форме (с исправленными ошибками,
- *  если они были)
- * @property {Tag} tag Тег, описывающий текущую форму слова.
- * @property {number} score Число от 0 до 1, соответствующее «уверенности»
- *  в данном разборе (чем оно выше, тем вероятнее данный вариант).
- * @property {number} stutterCnt Число «заиканий», исправленных в слове.
- * @property {number} typosCnt Число опечаток, исправленных в слове.
- */
-var Parse = function (word, tag, score, stutterCnt, typosCnt) {
-    this.word = word;
-    this.tag = tag;
-    this.stutterCnt = stutterCnt || 0;
-    this.typosCnt = typosCnt || 0;
-    this.score = score || 0;
-}
-
-/**
- * Приводит слово к его начальной форме.
- *
- * @param {boolean} keepPOS Не менять часть речи при нормализации (например,
- *  не делать из причастия инфинитив).
- * @returns {Parse} Разбор, соответствующий начальной форме или False,
- *  если произвести нормализацию не удалось.
- */
-// TODO: некоторые смены частей речи, возможно, стоит делать в любом случае (т.к., например, компаративы, краткие формы причастий и прилагательных разделены, инфинитив отделен от глагола)
-Parse.prototype.normalize = function (keepPOS) {
-    return this.inflect(keepPOS ? { POS: this.tag.POS } : 0);
-}
-
-/**
- * Приводит слово к указанной форме.
- *
- * @param {Tag|Parse} [tag] Тег или другой разбор слова, с которым следует
- *  согласовать данный.
- * @param {Array|Object} grammemes Граммемы, по которым нужно согласовать слово.
- * @returns {Parse|False} Разбор, соответствующий указанной форме или False,
- *  если произвести согласование не удалось.
- * @see Tag.matches
- */
-Parse.prototype.inflect = function (tag, grammemes) {
-    return this;
-}
-
-/**
- * Приводит слово к форме, согласующейся с указанным числом.
- * Вместо конкретного числа можно указать категорию (согласно http://www.unicode.org/cldr/charts/29/supplemental/language_plural_rules.html).
- *
- * @param {number|string} number Число, с которым нужно согласовать данное слово или категория, описывающая правило построения множественного числа.
- * @returns {Parse|False} Разбор, соответствующий указанному числу или False,
- *  если произвести согласование не удалось.
- */
-Parse.prototype.pluralize = function (number) {
-    if (!this.tag.NOUN && !this.tag.ADJF && !this.tag.PRTF) {
-        return this;
-    }
-
-    if (typeof number == 'number') {
-        number = number % 100;
-        if ((number % 10 == 0) || (number % 10 > 4) || (number > 4 && number < 21)) {
-            number = 'many';
-        } else if (number % 10 == 1) {
-            number = 'one';
-        } else {
-            number = 'few';
-        }
-    }
-
-    if (this.tag.NOUN && !this.tag.nomn && !this.tag.accs) {
-        return this.inflect([number == 'one' ? 'sing' : 'plur', this.tag.CAse]);
-    } else if (number == 'one') {
-        return this.inflect(['sing', this.tag.nomn ? 'nomn' : 'accs'])
-    } else if (this.tag.NOUN && (number == 'few')) {
-        return this.inflect(['sing', 'gent']);
-    } else if ((this.tag.ADJF || this.tag.PRTF) && this.tag.femn && (number == 'few')) {
-        return this.inflect(['plur', 'nomn']);
-    } else {
-        return this.inflect(['plur', 'gent']);
-    }
-}
-
-/**
- * Проверяет, согласуется ли текущая форма слова с указанной.
- *
- * @param {Tag|Parse} [tag] Тег или другой разбор слова, с которым следует
- *  проверить согласованность.
- * @param {Array|Object} grammemes Граммемы, по которым нужно проверить
- *  согласованность.
- * @returns {boolean} Является ли текущая форма слова согласованной с указанной.
- * @see Tag.matches
- */
-Parse.prototype.matches = function (tag, grammemes) {
-    return this.tag.matches(tag, grammemes);
-}
-
-/**
- * Возвращает текущую форму слова.
- *
- * @returns {String} Текущая форма слова.
- */
-Parse.prototype.toString = function () {
-    return this.word;
-}
-
-// Выводит информацию о слове в консоль.
-Parse.prototype.log = function () {
-    console.group(this.toString());
-    console.log('Stutter?', this.stutterCnt, 'Typos?', this.typosCnt);
-    console.log(this.tag.ext.toString());
-    console.groupEnd();
-}
 
 function lookup(dawg, word, config) {
     var entries;
@@ -1021,8 +791,8 @@ Morph.init = function (path, callback) {
         if (!--loading) {
             tags = Array(tagsInt.length);
             for (var i = 0; i < tagsInt.length; i++) {
-                tags[i] = new Tag(tagsInt[i]);
-                tags[i].ext = new Tag(tagsExt[i]);
+                tags[i] = new Tag(grammemes, tagsInt[i]);
+                tags[i].ext = new Tag(grammemes, tagsExt[i]);
             }
             tags = deepFreeze(tags);
             for (var i = 0; i < __init.length; i++) {

@@ -1,5 +1,5 @@
-import { DAWG } from './az.dawg';
-import { Morph } from './az.morph';
+import { DAWG } from './dawg';
+import { Morph } from './morph';
 
 export const Az = {
     load: function (url, responseType, callback) {
