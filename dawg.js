@@ -280,6 +280,14 @@ for (const k in CP1251) {
     delete UCS2[1];
 }
 
+function hasUCS2(code) {
+    return code in UCS2;
+}
+
+function getUCS2(code) {
+    return UCS2[code];
+}
+
 // Based on all common ЙЦУКЕН-keyboards (both Windows and Apple variations)
 const COMMON_TYPOS = {
     'й': 'иёцыф',
@@ -512,8 +520,8 @@ DAWG.prototype.findAll = function (str, replaces, mstutter = 0, mtypos = 0) {
                 let label = this.guide[index << 1]; // First child
                 do {
                     cur = this.followByte(label, index);
-                    if ((cur != MISSING) && (label in UCS2)) {
-                        prefixes.push([prefix + UCS2[label], len, typos + 1, stutter, cur]);
+                    if ((cur != MISSING) && (hasUCS2(label))) {
+                        prefixes.push([prefix + getUCS2(label), len, typos + 1, stutter, cur]);
                     }
                     label = this.guide[(cur << 1) + 1]; // Next child
                 } while (cur != MISSING);
@@ -557,8 +565,8 @@ DAWG.prototype.findAll = function (str, replaces, mstutter = 0, mtypos = 0) {
             let label = this.guide[index << 1]; // First child
             do {
                 cur = this.followByte(label, index);
-                if ((cur != MISSING) && (label in UCS2)) {
-                    prefixes.push([prefix + UCS2[label], len, typos + 1, stutter, cur]);
+                if ((cur != MISSING) && (hasUCS2(label))) {
+                    prefixes.push([prefix + getUCS2(label), len, typos + 1, stutter, cur]);
                 }
                 label = this.guide[(cur << 1) + 1]; // Next child
             } while (cur != MISSING);

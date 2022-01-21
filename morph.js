@@ -286,24 +286,6 @@ DictionaryParse.prototype.inflect = function (tag, grammemes) {
     return false;
 }
 
-DictionaryParse.prototype.log = function () {
-    console.group(this.toString());
-    console.log('Stutter?', this.stutterCnt, 'Typos?', this.typosCnt);
-    console.log(prefixes[this.paradigm[(this.formCnt << 1) + this.formIdx]] + '|' + this.base() + '|' + suffixes[this.paradigm[this.formIdx]]);
-    console.log(this.tag.ext.toString());
-    var norm = this.normalize();
-    console.log('=> ', norm + ' (' + norm.tag.ext.toString() + ')');
-    norm = this.normalize(true);
-    console.log('=> ', norm + ' (' + norm.tag.ext.toString() + ')');
-    console.groupCollapsed('Все формы: ' + this.formCnt);
-    for (var formIdx = 0; formIdx < this.formCnt; formIdx++) {
-        var form = this.inflect(formIdx);
-        console.log(form + ' (' + form.tag.ext.toString() + ')');
-    }
-    console.groupEnd();
-    console.groupEnd();
-}
-
 DictionaryParse.prototype.toString = function () {
     if (this.prefix) {
         var pref = prefixes[this.paradigm[(this.formCnt << 1) + this.formIdx]];
