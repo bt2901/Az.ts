@@ -1,59 +1,40 @@
 const files = [
-    {
-        name: 'grammemes.json',
-        responseType: 'json',
-    },
-    {
-        name: 'gramtab-opencorpora-ext.json',
-        responseType: 'json',
-    },
-    {
-        name: 'gramtab-opencorpora-int.json',
-        responseType: 'json',
-    },
-    {
-        name: 'meta.json',
-        responseType: 'json',
-    },
-    {
-        name: 'p_t_given_w.intdawg',
-        responseType: 'arrayBuffer',
-    },
-    {
-        name: 'paradigms.array',
-        responseType: 'arrayBuffer',
-    },
-    {
-        name: 'prediction-suffixes-0.dawg',
-        responseType: 'arrayBuffer',
-    },
-    {
-        name: 'prediction-suffixes-1.dawg',
-        responseType: 'arrayBuffer',
-    },
-    {
-        name: 'prediction-suffixes-2.dawg',
-        responseType: 'arrayBuffer',
-    },
-    {
-        name: 'suffixes.json',
-        responseType: 'json',
-    },
-    {
-        name: 'words.dawg',
-        responseType: 'arrayBuffer',
-    },
+    'grammemes.json',
+    'gramtab-opencorpora-ext.json',
+    'gramtab-opencorpora-int.json',
+    'meta.json',
+    'p_t_given_w.intdawg',
+    'paradigms.array',
+    'prediction-suffixes-0.dawg',
+    'prediction-suffixes-1.dawg',
+    'prediction-suffixes-2.dawg',
+    'prediction-suffixes-3.dawg',
+    'suffixes.json',
+    'words.dawg',
+    'config.json',
 ];
 
 export function loadDicts(dir, callback) {
-    Promise.all(files.map(({ name, responseType }) => (
-        fetch(`${dir}/${name}`).then((res) => res[responseType](),
-    )))).then((data) => {
+    Promise.all(files.map((name) => (
+        fetch(`${dir}/${name}`).then((res) => {
+            if (!res.ok) {
+                return null;
+            }
+
+            const isJson = name.split('.')[1] === 'json';
+
+            if (isJson) {
+                return res.json();
+            }
+
+            return res.arrayBuffer();
+        })
+    ))).then((data) => {
         callback(
-            files.reduce((obj, fileName, index) => (
+            files.reduce((obj, name, index) => (
                 {
                     ...obj,
-                    [fileName.name]: data[index],
+                    [name]: data[index],
                 }
             ), {})
         );

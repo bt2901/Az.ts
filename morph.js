@@ -11,46 +11,33 @@ let suffixes;
 let grammemes;
 let paradigms;
 let tags;
-let defaults = {
-        ignoreCase: false,
-        replacements: { 'е': 'ё' },
-        stutter: Infinity,
-        typos: 0,
-        parsers: [
-            // Словарные слова + инициалы
-            'Dictionary?', 'AbbrName?', 'AbbrPatronymic',
-            // Числа, пунктуация, латиница (по-хорошему, токенизатор не должен эту ерунду сюда пускать)
-            'IntNumber', 'RealNumber', 'Punctuation', 'RomanNumber?', 'Latin',
-            // Слова с дефисами
-            'HyphenParticle', 'HyphenAdverb', 'HyphenWords',
-            // Предсказатели по префиксам/суффиксам
-            'PrefixKnown', 'PrefixUnknown?', 'SuffixKnown?', 'Abbr'
-        ],
-        forceParse: false,
-        normalizeScore: true
-    },
-    initials = 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЭЮЯ',
-    particles = ['-то', '-ка', '-таки', '-де', '-тко', '-тка', '-с', '-ста'],
-    knownPrefixes = [
-        'авиа', 'авто', 'аква', 'анти', 'анти-', 'антропо', 'архи', 'арт', 'арт-', 'астро', 'аудио', 'аэро',
-        'без', 'бес', 'био', 'вело', 'взаимо', 'вне', 'внутри', 'видео', 'вице-', 'вперед', 'впереди',
-        'гекто', 'гелио', 'гео', 'гетеро', 'гига', 'гигро', 'гипер', 'гипо', 'гомо',
-        'дву', 'двух', 'де', 'дез', 'дека', 'деци', 'дис', 'до', 'евро', 'за', 'зоо', 'интер', 'инфра',
-        'квази', 'квази-', 'кило', 'кино', 'контр', 'контр-', 'космо', 'космо-', 'крипто', 'лейб-', 'лже', 'лже-',
-        'макро', 'макси', 'макси-', 'мало', 'меж', 'медиа', 'медиа-', 'мега', 'мета', 'мета-', 'метео', 'метро', 'микро',
-        'милли', 'мини', 'мини-', 'моно', 'мото', 'много', 'мульти',
-        'нано', 'нарко', 'не', 'небез', 'недо', 'нейро', 'нео', 'низко', 'обер-', 'обще', 'одно', 'около', 'орто',
-        'палео', 'пан', 'пара', 'пента', 'пере', 'пиро', 'поли', 'полу', 'после', 'пост', 'пост-',
-        'порно', 'пра', 'пра-', 'пред', 'пресс-', 'противо', 'противо-', 'прото', 'псевдо', 'псевдо-',
-        'радио', 'разно', 'ре', 'ретро', 'ретро-', 'само', 'санти', 'сверх', 'сверх-', 'спец', 'суб', 'супер', 'супер-', 'супра',
-        'теле', 'тетра', 'топ-', 'транс', 'транс-', 'ультра', 'унтер-', 'штаб-',
-        'экзо', 'эко', 'эндо', 'эконом-', 'экс', 'экс-', 'экстра', 'экстра-', 'электро', 'энерго', 'этно'
-    ];
+const defaults = {
+    ignoreCase: false,
+    replacements: { 'е': 'ё' },
+    stutter: 0,
+    typos: 0,
+    parsers: [
+        // Словарные слова + инициалы
+        'Dictionary?', 'AbbrName?', 'AbbrPatronymic',
+        // Числа, пунктуация, латиница (по-хорошему, токенизатор не должен эту ерунду сюда пускать)
+        'IntNumber', 'RealNumber', 'Punctuation', 'RomanNumber?', 'Latin',
+        // Слова с дефисами
+        'HyphenParticle', 'HyphenAdverb', 'HyphenWords',
+        // Предсказатели по префиксам/суффиксам
+        'PrefixKnown', 'PrefixUnknown?', 'SuffixKnown?', 'Abbr'
+    ],
+    forceParse: false,
+    normalizeScore: true
+};
+
+let initials;
+let particles;
+let knownPrefixes;
+
 const autoTypos = [4, 9];
 let UNKN;
 const __init = [];
 let initialized = false;
-
 
 export function makeTag(tagInt, tagExt) {
     var tag = new Tag(grammemes, tagInt);
@@ -168,9 +155,12 @@ export const Morph = function (word, config) {
     var total = 0;
     for (var i = 0; i < parses.length; i++) {
         if (parses[i].parser == 'Dictionary') {
-            var res = probabilities.findAll(parses[i] + ':' + parses[i].tag);
+            var res = probabilities?.findAll(parses[i] + ':' + parses[i].tag);
             if (res && res[0]) {
                 parses[i].score = (res[0][1] / 1000000) * getDictionaryScore(parses[i].stutterCnt, parses[i].typosCnt);
+                total += parses[i].score;
+            } else {
+                parses[i].score = 0.2;
                 total += parses[i].score;
             }
         }
@@ -745,19 +735,13 @@ __init.push(function () {
     UNKN = makeTag('UNKN', 'НЕИЗВ');
 });
 
-/**
- * Задает опции морфологического анализатора по умолчанию.
- *
- * @param {Object} config Опции анализатора.
- * @see Morph
- */
-Morph.setDefaults = function (config) {
-    defaults = config;
-}
-
 Morph.init = function (files) {
     let tagsInt;
     let tagsExt;
+
+    knownPrefixes = files['config.json'].prefixes;
+    particles = files['config.json'].particles;
+    initials = files['config.json'].initials;
 
     words = new DAWG(files['words.dawg'], 'words');
 
@@ -765,7 +749,9 @@ Morph.init = function (files) {
         predictionSuffixes[prefix] = new DAWG(files[`prediction-suffixes-${prefix}.dawg`], 'probs');
     }
 
-    probabilities = new DAWG(files['p_t_given_w.intdawg'], 'int');
+    if (files['p_t_given_w.intdawg']) {
+        probabilities = new DAWG(files['p_t_given_w.intdawg'], 'int');
+    }
 
     grammemes = {};
     const grammemesJson = files['grammemes.json']
