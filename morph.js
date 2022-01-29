@@ -5,7 +5,7 @@ import { Parse } from './parse';
 /** @namespace Index **/
 let words;
 let probabilities;
-let predictionSuffixes = new Array(3);
+let predictionSuffixes;
 let prefixes = ['', 'по', 'наи'];
 let suffixes;
 let grammemes;
@@ -160,7 +160,7 @@ export const Morph = function (word, config) {
                 parses[i].score = (res[0][1] / 1000000) * getDictionaryScore(parses[i].stutterCnt, parses[i].typosCnt);
                 total += parses[i].score;
             } else {
-                parses[i].score = 0.2;
+                parses[i].score = 1;
                 total += parses[i].score;
             }
         }
@@ -745,12 +745,16 @@ Morph.init = function (files) {
 
     words = new DAWG(files['words.dawg'], 'words');
 
+    predictionSuffixes = new Array(3);
+
     for (let prefix = 0; prefix < 3; prefix++) {
         predictionSuffixes[prefix] = new DAWG(files[`prediction-suffixes-${prefix}.dawg`], 'probs');
     }
 
     if (files['p_t_given_w.intdawg']) {
         probabilities = new DAWG(files['p_t_given_w.intdawg'], 'int');
+    } else {
+        probabilities = undefined;
     }
 
     grammemes = {};
