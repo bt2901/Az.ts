@@ -1,3 +1,4 @@
+import { Parse } from './parse';
 
 /**
  * Тег. Содержит в себе информацию о конкретной форме слова, но при этом
@@ -68,9 +69,9 @@ Tag.prototype.toString = function () {
  * @returns {boolean} Является ли текущий тег согласованным с указанным.
  */
 // TODO: научиться понимать, что некоторые граммемы можно считать эквивалентными при сравнении двух тегов (вариации падежей и т.п.)
-Tag.prototype.matches = function (tag, grammemes) {
+Tag.prototype.matches = function (tag: any, grammemes) {
     if (!grammemes) {
-        if (Object.prototype.toString.call(tag) === '[object Array]') {
+        if (Array.isArray(tag)) {
             for (var i = 0; i < tag.length; i++) {
                 if (!this[tag[i]]) {
                     return false;
@@ -80,7 +81,7 @@ Tag.prototype.matches = function (tag, grammemes) {
         } else
             // Match to map
             for (var k in tag) {
-                if (Object.prototype.toString.call(tag[k]) === '[object Array]') {
+                if (Array.isArray(tag[k])) {
                     if (!tag[k].indexOf(this[k])) {
                         return false;
                     }
@@ -94,6 +95,7 @@ Tag.prototype.matches = function (tag, grammemes) {
     }
 
     if (tag instanceof Parse) {
+        // @ts-ignore
         tag = tag.tag;
     }
 
@@ -118,3 +120,8 @@ Tag.prototype.isCapitalized = function () {
     return this.Name || this.Surn || this.Patr || this.Geox || this.Init;
 }
 
+export function makeTag(grammemes, tagInt, tagExt) {
+    const tag = new Tag(grammemes, tagInt);
+    tag.ext = new Tag(grammemes, tagExt);
+    return tag;
+}

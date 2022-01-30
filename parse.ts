@@ -10,7 +10,7 @@
  * @property {number} stutterCnt Число «заиканий», исправленных в слове.
  * @property {number} typosCnt Число опечаток, исправленных в слове.
  */
-export const Parse = function (word, tag, score, stutterCnt, typosCnt) {
+export const Parse = function (word, tag, score?: any, stutterCnt?: any, typosCnt?: any) {
     this.word = word;
     this.tag = tag;
     this.stutterCnt = stutterCnt || 0;

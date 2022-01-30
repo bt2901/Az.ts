@@ -2,6 +2,9 @@ import { readStringMapDawg, readByteCompletionDawg } from 'dawgjs/factories';
 import { encodeUtf8 } from 'dawgjs/codec';
 
 export class DAWG {
+    private format;
+    private dawgjs;
+
     constructor(buffer, format) {
         this.format = format;
 
@@ -15,19 +18,18 @@ export class DAWG {
             this.dawgjs = readByteCompletionDawg(buffer);
         }
     }
-    findAll(str) {
-        if (this.format === 'int') {
-            const index = this.dawgjs.dictionary.followBytes(encodeUtf8(str));
-            const hasValue = this.dawgjs.dictionary.hasValue(index);
-            const value = this.dawgjs.dictionary.value(index) ^ (1 << 31);
+    getInt(str) {
+        const index = this.dawgjs.dictionary.followBytes(encodeUtf8(str));
+        const hasValue = this.dawgjs.dictionary.hasValue(index);
+        const value = this.dawgjs.dictionary.value(index) ^ (1 << 31);
 
-            if (hasValue) {
-                return [[str, value]];
-            }
-
-            return [];
+        if (hasValue) {
+            return [[str, value]];
         }
 
+        return [];
+    }
+    getStr(str) {
         const indexes = this.dawgjs.getArray(str);
 
         if (indexes.length) {
@@ -42,6 +44,13 @@ export class DAWG {
         } else {
             return [];
         }
+    }
+    findAll(str) {
+        if (this.format === 'int') {
+            return this.getInt(str);
+        }
+
+        return this.getStr(str);
     }
     deserializerWord(bytes) {
         let view = new DataView(bytes.buffer);
