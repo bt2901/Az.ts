@@ -137,19 +137,16 @@ export class AzClass {
             var name = this.config.parsers[i];
             var terminal = name[name.length - 1] != '?';
             name = terminal ? name : name.slice(0, -1);
-            if (name in this.parsers) {
-                var vars = this.parsers[name](word, this.config);
-                for (var j = 0; j < vars.length; j++) {
-                    vars[j].parser = name;
-                    matched = true;
-                }
 
-                parses = parses.concat(vars);
-                // if (matched && terminal) {
-                //     break;
-                // }
-            } else {
-                console.warn('Parser "' + name + '" is not found. Skipping');
+            var vars = this.parsers[name](word, this.config);
+            for (var j = 0; j < vars.length; j++) {
+                vars[j].parser = name;
+                matched = true;
+            }
+
+            parses = parses.concat(vars);
+            if (matched && terminal) {
+                break;
             }
         }
 
@@ -200,8 +197,6 @@ export class AzClass {
         }
 
         parses.sort( (a, b) => b.score - a.score);
-
-        console.log(parses.map((res) => [res.normalize().toString(), res.score]));
 
         return parses;
     }
