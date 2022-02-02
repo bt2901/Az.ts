@@ -1,6 +1,3 @@
-import { Parse } from './parse';
-import { getDictionaryScore } from './getDictionaryScore';
-
 export const DictionaryParse = function (
     paradigms?: any,
     tags?: any,
@@ -9,8 +6,6 @@ export const DictionaryParse = function (
     word?: any,
     paradigmIdx?: any,
     formIdx?: any,
-    stutterCnt?: any,
-    typosCnt?: any,
     prefix?: any,
     suffix?: any,
 ) {
@@ -25,17 +20,11 @@ export const DictionaryParse = function (
     this.formIdx = formIdx;
     this.formCnt = this.paradigm.length / 3;
     this.tag = this.tags[this.paradigm[this.formCnt + formIdx]];
-    this.stutterCnt = stutterCnt || 0;
-    this.typosCnt = typosCnt || 0;
-    this.score = getDictionaryScore(this.stutterCnt, this.typosCnt);
+    this.score = 1;
     this.prefix = prefix || '';
     this.suffix = suffix || '';
 }
 
-DictionaryParse.prototype = Object.create(Parse.prototype);
-DictionaryParse.prototype.constructor = DictionaryParse;
-
-// Возвращает основу слова
 DictionaryParse.prototype.base = function () {
     if (this._base) {
         return this._base;
@@ -46,8 +35,6 @@ DictionaryParse.prototype.base = function () {
     );
 }
 
-// Склоняет/спрягает слово так, чтобы оно соответствовало граммемам другого слова, тега или просто конкретным граммемам (подробнее см. Tag.prototype.matches).
-// Всегда выбирается первый подходящий вариант.
 DictionaryParse.prototype.inflect = function (tag, grammemes) {
     if (!grammemes && typeof tag === 'number') {
         // Inflect to specific formIdx
@@ -60,7 +47,9 @@ DictionaryParse.prototype.inflect = function (tag, grammemes) {
             this.base() +
             this.suffixes[this.paradigm[tag]],
             this.paradigmIdx,
-            tag, 0, 0, this.prefix, this.suffix
+            tag,
+            this.prefix,
+            this.suffix,
         );
     }
 
@@ -75,7 +64,9 @@ DictionaryParse.prototype.inflect = function (tag, grammemes) {
                 this.base() +
                 this.suffixes[this.paradigm[formIdx]],
                 this.paradigmIdx,
-                formIdx, 0, 0, this.prefix, this.suffix
+                formIdx,
+                this.prefix,
+                this.suffix,
             );
         }
     }
@@ -89,5 +80,38 @@ DictionaryParse.prototype.toString = function () {
         return pref + this.prefix + this.word.substr(pref.length) + this.suffix;
     } else {
         return this.word + this.suffix;
+    }
+}
+
+DictionaryParse.prototype.normalize = function (keepPOS) {
+    return this.inflect(keepPOS ? { POS: this.tag.POS } : 0);
+}
+
+DictionaryParse.prototype.pluralize = function (number) {
+    if (!this.tag.NOUN && !this.tag.ADJF && !this.tag.PRTF) {
+        return this;
+    }
+
+    if (typeof number == 'number') {
+        number = number % 100;
+        if ((number % 10 == 0) || (number % 10 > 4) || (number > 4 && number < 21)) {
+            number = 'many';
+        } else if (number % 10 == 1) {
+            number = 'one';
+        } else {
+            number = 'few';
+        }
+    }
+
+    if (this.tag.NOUN && !this.tag.nomn && !this.tag.accs) {
+        return this.inflect([number == 'one' ? 'sing' : 'plur', this.tag.CAse]);
+    } else if (number == 'one') {
+        return this.inflect(['sing', this.tag.nomn ? 'nomn' : 'accs'])
+    } else if (this.tag.NOUN && (number == 'few')) {
+        return this.inflect(['sing', 'gent']);
+    } else if ((this.tag.ADJF || this.tag.PRTF) && this.tag.femn && (number == 'few')) {
+        return this.inflect(['plur', 'nomn']);
+    } else {
+        return this.inflect(['plur', 'gent']);
     }
 }

@@ -1,5 +1,3 @@
-import { Parse } from './parse';
-
 /**
  * Тег. Содержит в себе информацию о конкретной форме слова, но при этом
  * к конкретному слову не привязан. Всевозможные значения тегов переиспользуются
@@ -94,11 +92,6 @@ Tag.prototype.matches = function (tag: any, grammemes) {
         return true;
     }
 
-    if (tag instanceof Parse) {
-        // @ts-ignore
-        tag = tag.tag;
-    }
-
     // Match to another tag
     for (var i = 0; i < grammemes.length; i++) {
         if (tag[grammemes[i]] != this[grammemes[i]]) {
@@ -118,10 +111,4 @@ Tag.prototype.isProductive = function () {
 
 Tag.prototype.isCapitalized = function () {
     return this.Name || this.Surn || this.Patr || this.Geox || this.Init;
-}
-
-export function makeTag(grammemes, tagInt, tagExt) {
-    const tag = new Tag(grammemes, tagInt);
-    tag.ext = new Tag(grammemes, tagExt);
-    return tag;
 }

@@ -34,23 +34,45 @@ export class DAWG {
 
         if (indexes.length) {
             return [
-                [
-                    str,
-                    indexes,
-                    0,
-                    0,
-                ]
+                str,
+                indexes,
             ];
-        } else {
-            return [];
         }
+
+        return;
     }
-    findAll(str) {
+    getAllReplaces(str, replaces) {
+        const allReplaces = [];
+
+        if (!replaces || !replaces.length) {
+            return allReplaces;
+        }
+
+        for (let i = 0; i < str.length; i++) {
+            const char = str[i];
+
+            replaces.forEach(([from, to]) => {
+                if (char === from) {
+                    allReplaces.push(`${str.slice(0, i)}${to}${str.slice(i + 1)}`);
+                }
+            });
+        }
+
+        return allReplaces;
+    }
+    findAll(str, replaces) {
         if (this.format === 'int') {
             return this.getInt(str);
         }
 
-        return this.getStr(str);
+        const results = [
+            this.getStr(str),
+            ...this.getAllReplaces(str, replaces).map((rep) => this.getStr(rep)),
+        ];
+
+        // console.log('str', str, results);
+
+        return results.filter(Boolean);
     }
     deserializerWord(bytes) {
         let view = new DataView(bytes.buffer);

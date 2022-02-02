@@ -1,22 +1,14 @@
-import { Parse } from "./parse";
-import { getDictionaryScore } from "./getDictionaryScore";
-import { DAWG } from "./dawg";
-import { Tag, makeTag } from "./tag";
-import { getParsers } from "./parsers";
+import { DAWG } from './dawg';
+import { Tag } from './tag';
+import { getParsers } from './parsers';
 
 const defaults = {
-    ignoreCase: false,
-    stutter: 0,
-    typos: 0,
+    ignoreCase: this,
     parsers: [
-        // Словарные слова + инициалы
-        'Dictionary?', 'AbbrName?', 'AbbrPatronymic',
-        // Числа, пунктуация, латиница (по-хорошему, токенизатор не должен эту ерунду сюда пускать)
-        'IntNumber', 'RealNumber', 'Punctuation', 'RomanNumber?', 'Latin',
-        // Слова с дефисами
-        'HyphenParticle', 'HyphenAdverb', 'HyphenWords',
-        // Предсказатели по префиксам/суффиксам
-        'PrefixKnown', 'PrefixUnknown?', 'SuffixKnown?', 'Abbr'
+        'Dictionary?',
+        'PrefixKnown',
+        'PrefixUnknown?',
+        'SuffixKnown?',
     ],
     forceParse: false,
     normalizeScore: true
@@ -43,11 +35,11 @@ export class AzClass {
     constructor() {
 
     }
+
     init(files) {
         this.initialized = false;
 
         let tagsInt;
-        let tagsExt;
 
         this.knownPrefixes = files['config.json'].knownPrefixes;
         this.prefixes = files['config.json'].prefixes;
@@ -71,15 +63,10 @@ export class AzClass {
 
         this.grammemes = {
             'NUMB': parent,
-            'ЧИСЛО': parent,
             'ROMN': parent,
-            'РИМ': parent,
             'LATN': parent,
-            'ЛАТ': parent,
             'PNCT': parent,
-            'ЗПР': parent,
             'UNKN': parent,
-            'НЕИЗВ': parent,
         };
 
         const grammemesJson = files['grammemes.json'];
@@ -94,13 +81,11 @@ export class AzClass {
         }
 
         tagsInt = files['gramtab-opencorpora-int.json'];
-        tagsExt = files['gramtab-opencorpora-ext.json'];
 
         this.tags = Array(tagsInt.length);
 
         for (let i = 0; i < tagsInt.length; i++) {
             this.tags[i] = new Tag(this.grammemes, tagsInt[i]);
-            this.tags[i].ext = new Tag(this.grammemes, tagsExt[i]);
         }
 
         this.suffixes = files['suffixes.json'];
@@ -128,13 +113,17 @@ export class AzClass {
             this.initials,
             this.particles,
             this.knownPrefixes,
-            this.grammemes,
         );
 
-        this.UNKN = makeTag(this.grammemes, 'UNKN', 'НЕИЗВ');
+        this.UNKN = new Tag(this.grammemes, 'UNKN');
 
         this.initialized = true;
     }
+
+    inflect() {
+
+    }
+
     morph(word, config) {
         if (!this.initialized) {
             throw new Error('Please call Az.Morph.init() before using this module.');
@@ -149,25 +138,26 @@ export class AzClass {
             var terminal = name[name.length - 1] != '?';
             name = terminal ? name : name.slice(0, -1);
             if (name in this.parsers) {
-                var vars = this.parsers[name](word, config);
+                var vars = this.parsers[name](word, this.config);
                 for (var j = 0; j < vars.length; j++) {
                     vars[j].parser = name;
-                    if (!vars[j].stutterCnt && !vars[j].typosCnt) {
-                        matched = true;
-                    }
+                    matched = true;
                 }
 
                 parses = parses.concat(vars);
-                if (matched && terminal) {
-                    break;
-                }
+                // if (matched && terminal) {
+                //     break;
+                // }
             } else {
                 console.warn('Parser "' + name + '" is not found. Skipping');
             }
         }
 
-        if (!parses.length && config.forceParse) {
-            parses.push(new Parse(word.toLocaleLowerCase(), this.UNKN));
+        if (!parses.length && this.config.forceParse) {
+            parses.push({
+                word,
+                tag: this.UNKN,
+            });
         }
 
         var total = 0;
@@ -175,7 +165,7 @@ export class AzClass {
             if (parses[i].parser == 'Dictionary') {
                 var res = this.probabilities?.findAll(parses[i] + ':' + parses[i].tag);
                 if (res && res[0]) {
-                    parses[i].score = (res[0][1] / 1000000) * getDictionaryScore(parses[i].stutterCnt, parses[i].typosCnt);
+                    parses[i].score = res[0][1] / 1000000;
                     total += parses[i].score;
                 } else {
                     parses[i].score = 1;
@@ -185,7 +175,7 @@ export class AzClass {
         }
 
         // Normalize Dictionary & non-Dictionary scores separately
-        if (config.normalizeScore) {
+        if (this.config.normalizeScore) {
             if (total > 0) {
                 for (var i = 0; i < parses.length; i++) {
                     if (parses[i].parser == 'Dictionary') {
@@ -209,9 +199,9 @@ export class AzClass {
             }
         }
 
-        parses.sort(function (e1, e2) {
-            return e2.score - e1.score;
-        });
+        parses.sort( (a, b) => b.score - a.score);
+
+        console.log(parses.map((res) => [res.normalize().toString(), res.score]));
 
         return parses;
     }

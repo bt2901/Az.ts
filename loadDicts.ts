@@ -1,6 +1,5 @@
 const files = [
     'grammemes.json',
-    'gramtab-opencorpora-ext.json',
     'gramtab-opencorpora-int.json',
     'meta.json',
     'p_t_given_w.intdawg',
