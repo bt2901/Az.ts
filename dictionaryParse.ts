@@ -3,6 +3,7 @@ export const DictionaryParse = function (
     tags?: any,
     prefixes?: any,
     suffixes?: any,
+
     word?: any,
     paradigmIdx?: any,
     formIdx?: any,
@@ -29,10 +30,13 @@ DictionaryParse.prototype.base = function () {
     if (this._base) {
         return this._base;
     }
-    return (this._base = this.word.substring(
-            this.prefixes[this.paradigm[(this.formCnt << 1) + this.formIdx]].length,
-            this.word.length - this.suffixes[this.paradigm[this.formIdx]].length)
+
+    this._base = this.word.substring(
+        this.prefixes[this.paradigm[(this.formCnt << 1) + this.formIdx]].length,
+        this.word.length - this.suffixes[this.paradigm[this.formIdx]].length,
     );
+
+    return this._base;
 }
 
 DictionaryParse.prototype.inflect = function (tag, grammemes) {
@@ -43,9 +47,8 @@ DictionaryParse.prototype.inflect = function (tag, grammemes) {
             this.tags,
             this.prefixes,
             this.suffixes,
-            this.prefixes[this.paradigm[(this.formCnt << 1) + tag]] +
-            this.base() +
-            this.suffixes[this.paradigm[tag]],
+
+            this.prefixes[this.paradigm[(this.formCnt << 1) + tag]] + this.base() + this.suffixes[this.paradigm[tag]],
             this.paradigmIdx,
             tag,
             this.prefix,
@@ -60,9 +63,8 @@ DictionaryParse.prototype.inflect = function (tag, grammemes) {
                 this.tags,
                 this.prefixes,
                 this.suffixes,
-                this.prefixes[this.paradigm[(this.formCnt << 1) + formIdx]] +
-                this.base() +
-                this.suffixes[this.paradigm[formIdx]],
+
+                this.prefixes[this.paradigm[(this.formCnt << 1) + formIdx]] + this.base() + this.suffixes[this.paradigm[formIdx]],
                 this.paradigmIdx,
                 formIdx,
                 this.prefix,

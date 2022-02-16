@@ -1,9 +1,9 @@
-import { DAWG } from './dawg';
+import { Dawg } from './dawg';
 import { Tag } from './tag';
 import { getParsers } from './parsers';
 
 const defaults = {
-    ignoreCase: this,
+    ignoreCase: true,
     parsers: [
         'Dictionary?',
         'PrefixKnown',
@@ -15,79 +15,65 @@ const defaults = {
 };
 
 export class AzClass {
-    private initialized;
-    private knownPrefixes;
-    private prefixes;
-    private particles;
-    private initials;
-    private replacements;
-    private words;
-    private predictionSuffixes;
-    private probabilities;
-    private grammemes;
+    private initialized: boolean;
+    private knownPrefixes: string[];
+    private prefixes: string[];
+    private particles: string[];
+    private replacements?: string[][];
+    private words: Dawg;
+    private predictionSuffixes: Dawg[];
+    private probabilities?: Dawg;
+    private grammemes: {
+        [key: string]: {
+            internal: string,
+            parent: string,
+            external: string,
+            externalFull: string,
+        },
+    };
     private tags;
     private config;
-    private suffixes;
-    private paradigms;
+    private suffixes: string[];
+    private paradigms: Uint16Array[];
     private parsers;
-    private UNKN;
 
-    constructor() {
-
-    }
-
-    init(files) {
+    public init(files) {
         this.initialized = false;
-
-        let tagsInt;
 
         this.knownPrefixes = files['config.json'].knownPrefixes;
         this.prefixes = files['config.json'].prefixes;
         this.particles = files['config.json'].particles;
-        this.initials = files['config.json'].initials;
         this.replacements = files['config.json'].replacements;
 
-        this.words = new DAWG(files['words.dawg'], 'words');
+        this.words = new Dawg(files['words.dawg'], 'words');
 
         this.predictionSuffixes = new Array(3);
 
         for (let prefix = 0; prefix < 3; prefix++) {
-            this.predictionSuffixes[prefix] = new DAWG(files[`prediction-suffixes-${prefix}.dawg`], 'probs');
+            this.predictionSuffixes[prefix] = new Dawg(files[`prediction-suffixes-${prefix}.dawg`], 'probs');
         }
 
         if (files['p_t_given_w.intdawg']) {
-            this.probabilities = new DAWG(files['p_t_given_w.intdawg'], 'int');
+            this.probabilities = new Dawg(files['p_t_given_w.intdawg'], 'int');
         }
 
-        const parent = { parent: 'POST' };
-
-        this.grammemes = {
-            'NUMB': parent,
-            'ROMN': parent,
-            'LATN': parent,
-            'PNCT': parent,
-            'UNKN': parent,
-        };
+        this.grammemes = {};
 
         const grammemesJson = files['grammemes.json'];
 
-        for (let i = 0; i < grammemesJson.length; i++) {
-            this.grammemes[grammemesJson[i][0]] = this.grammemes[grammemesJson[i][2]] = {
-                parent: grammemesJson[i][1],
-                internal: grammemesJson[i][0],
-                external: grammemesJson[i][2],
-                externalFull: grammemesJson[i][3]
-            }
-        }
+        this.grammemes = grammemesJson.reduce((all, [internal, parent, external, externalFull]) => {
+            const grammeme = {
+                internal, parent, external, externalFull,
+            };
 
-        tagsInt = files['gramtab-opencorpora-int.json'];
+            return {
+                ...all,
+                [internal]: grammeme,
+                [external]: grammeme,
+            };
+        }, {});
 
-        this.tags = Array(tagsInt.length);
-
-        for (let i = 0; i < tagsInt.length; i++) {
-            this.tags[i] = new Tag(this.grammemes, tagsInt[i]);
-        }
-
+        this.tags = files['gramtab-opencorpora-int.json'].map((tag) => new Tag(this.grammemes, tag));
         this.suffixes = files['suffixes.json'];
 
         const list = new Uint16Array(files['paradigms.array']);
@@ -110,21 +96,16 @@ export class AzClass {
             this.suffixes,
             this.predictionSuffixes,
             this.replacements,
-            this.initials,
             this.particles,
             this.knownPrefixes,
         );
 
-        this.UNKN = new Tag(this.grammemes, 'UNKN');
-
         this.initialized = true;
+
+        return this;
     }
 
-    inflect() {
-
-    }
-
-    morph(word, config) {
+    public morph(word, config) {
         if (!this.initialized) {
             throw new Error('Please call Az.Morph.init() before using this module.');
         }
@@ -150,19 +131,13 @@ export class AzClass {
             }
         }
 
-        if (!parses.length && this.config.forceParse) {
-            parses.push({
-                word,
-                tag: this.UNKN,
-            });
-        }
-
-        var total = 0;
-        for (var i = 0; i < parses.length; i++) {
+        let total = 0;
+        for (let i = 0; i < parses.length; i++) {
             if (parses[i].parser == 'Dictionary') {
-                var res = this.probabilities?.findAll(parses[i] + ':' + parses[i].tag);
-                if (res && res[0]) {
-                    parses[i].score = res[0][1] / 1000000;
+                const rawScore = this.probabilities?.getInt(parses[i] + ':' + parses[i].tag);
+
+                if (typeof rawScore !== undefined) {
+                    parses[i].score = rawScore / 1000000;
                     total += parses[i].score;
                 } else {
                     parses[i].score = 1;

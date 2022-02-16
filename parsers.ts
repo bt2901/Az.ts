@@ -8,7 +8,6 @@ export function getParsers(
     suffixes,
     predictionSuffixes,
     replacements,
-    initials,
     particles,
     knownPrefixes,
 ) {

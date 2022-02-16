@@ -1,7 +1,7 @@
 import { readStringMapDawg, readByteCompletionDawg } from 'dawgjs/factories';
 import { encodeUtf8 } from 'dawgjs/codec';
 
-export class DAWG {
+export class Dawg {
     private format;
     private dawgjs;
 
@@ -18,18 +18,26 @@ export class DAWG {
             this.dawgjs = readByteCompletionDawg(buffer);
         }
     }
-    getInt(str) {
+    public findAll(str: string, replaces?: string[][]) {
+        const results = [
+            this.getStr(str),
+            ...this.getAllReplaces(str, replaces).map((rep) => this.getStr(rep)),
+        ];
+
+        return results.filter(Boolean);
+    }
+    public getInt(str): number {
         const index = this.dawgjs.dictionary.followBytes(encodeUtf8(str));
         const hasValue = this.dawgjs.dictionary.hasValue(index);
         const value = this.dawgjs.dictionary.value(index) ^ (1 << 31);
 
         if (hasValue) {
-            return [[str, value]];
+            return value;
         }
 
-        return [];
+        return;
     }
-    getStr(str) {
+    private getStr(str) {
         const indexes = this.dawgjs.getArray(str);
 
         if (indexes.length) {
@@ -41,7 +49,7 @@ export class DAWG {
 
         return;
     }
-    getAllReplaces(str, replaces) {
+    private getAllReplaces(str, replaces) {
         const allReplaces = [];
 
         if (!replaces || !replaces.length) {
@@ -60,21 +68,7 @@ export class DAWG {
 
         return allReplaces;
     }
-    findAll(str, replaces) {
-        if (this.format === 'int') {
-            return this.getInt(str);
-        }
-
-        const results = [
-            this.getStr(str),
-            ...this.getAllReplaces(str, replaces).map((rep) => this.getStr(rep)),
-        ];
-
-        // console.log('str', str, results);
-
-        return results.filter(Boolean);
-    }
-    deserializerWord(bytes) {
+    private deserializerWord(bytes) {
         let view = new DataView(bytes.buffer);
 
         const paradigmId = view.getUint16(0);
@@ -82,7 +76,7 @@ export class DAWG {
 
         return [paradigmId, indexInParadigm];
     }
-    deserializerProbs(bytes) {
+    private deserializerProbs(bytes) {
         let view = new DataView(bytes.buffer);
 
         const paradigmId = view.getUint16(0);
