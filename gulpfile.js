@@ -14,7 +14,7 @@ var gulp = require('gulp'),
 
 gulp.task('docs', function () {
   return merge(
-    tsProject.src(['src/az.tokens.ts', 'src/az.morph.ts'])
+    tsProject.src(['src/az.tokens.ts', 'src/az.ts'])
       .pipe(jsdoc2md({ template: fs.readFileSync('./api.hbs', 'utf8') }))
       .on('error', function (err) {
         gutil.log(gutil.colors.red('jsdoc2md failed'), err.message)
@@ -35,7 +35,7 @@ gulp.task('docs', function () {
 });
 
 gulp.task('default', function() {
-  return tsProject.src(['src/az.ts', 'src/az.*.ts'])
+  return tsProject.src(['src/az.ts', 'src/loadDicts.ts', 'src/index.ts'])
     .pipe(tsProject())
     .pipe(terser())
     .pipe(gulp.dest('dist'))

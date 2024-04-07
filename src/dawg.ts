@@ -1,11 +1,16 @@
 import { readStringMapDawg, readByteCompletionDawg } from 'dawgjs/factories';
+
+import { ByteDawg } from 'dawgjs/byte_dawg';
+import { ByteMapDawg } from 'dawgjs/byte_map_dawg';
+import { MapDawg } from 'dawgjs/map_dawg';
+import { ByteCompletionDawg } from 'dawgjs/byte_completion_dawg';
 import { encodeUtf8 } from 'dawgjs/codec';
 
 export class Dawg {
     private format;
     private dawgjs;
 
-    constructor(buffer, format) {
+    constructor(buffer: ArrayBuffer, format: string) {
         this.format = format;
 
         if (format === 'words') {
@@ -26,18 +31,18 @@ export class Dawg {
 
         return results.filter(Boolean);
     }
-    public getInt(str): number {
-        const index = this.dawgjs.dictionary.followBytes(encodeUtf8(str));
-        const hasValue = this.dawgjs.dictionary.hasValue(index);
-        const value = this.dawgjs.dictionary.value(index) ^ (1 << 31);
+    public getInt(str: string): number | undefined {
+        const index = this.dawgjs?.dictionary?.followBytes(encodeUtf8(str));
+        const hasValue = this.dawgjs?.dictionary?.hasValue(index);
+        const value = this.dawgjs?.dictionary?.value(index) ^ (1 << 31);
 
-        if (hasValue) {
+        if (hasValue && typeof value !== 'undefined') {
             return value;
         }
-
-        return;
+        return undefined;
     }
-    private getStr(str) {
+
+    private getStr(str: string) {
         const indexes = this.dawgjs.getArray(str);
 
         if (indexes.length) {
@@ -49,8 +54,8 @@ export class Dawg {
 
         return;
     }
-    private getAllReplaces(str, replaces) {
-        const allReplaces = [];
+    private getAllReplaces(str: string, replaces?: string[][]): string[] {
+        const allReplaces: string[] = [];
 
         if (!replaces || !replaces.length) {
             return allReplaces;
@@ -68,7 +73,7 @@ export class Dawg {
 
         return allReplaces;
     }
-    private deserializerWord(bytes) {
+    private deserializerWord(bytes: Uint8Array): [number, number] {
         let view = new DataView(bytes.buffer);
 
         const paradigmId = view.getUint16(0);
@@ -76,7 +81,7 @@ export class Dawg {
 
         return [paradigmId, indexInParadigm];
     }
-    private deserializerProbs(bytes) {
+    private deserializerProbs(bytes: Uint8Array): [number, number, number] {
         let view = new DataView(bytes.buffer);
 
         const paradigmId = view.getUint16(0);

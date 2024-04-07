@@ -16,42 +16,53 @@ export class Tag {
     public stat: string[];
     public flex: string[];
 
-    public POS: boolean;
-    public POST: boolean;
-    public NUMR: boolean;
-    public NPRO: boolean;
-    public PRED: boolean;
-    public PREP: boolean;
-    public CONJ: boolean;
-    public PRCL: boolean;
-    public INTJ: boolean;
-    public Apro: boolean;
-    public NUMB: boolean;
-    public ROMN: boolean;
-    public LATN: boolean;
-    public PNCT: boolean;
-    public UNKN: boolean;
+    public POS!: boolean;
+    public POST!: boolean;
+    public NUMR!: boolean;
+    public NPRO!: boolean;
+    public PRED!: boolean;
+    public PREP!: boolean;
+    public CONJ!: boolean;
+    public PRCL!: boolean;
+    public INTJ!: boolean;
+    public Apro!: boolean;
+    public NUMB!: boolean;
+    public ROMN!: boolean;
+    public LATN!: boolean;
+    public PNCT!: boolean;
+    public UNKN!: boolean;
 
-    public Name: string;
-    public Surn: string;
-    public Patr: string;
-    public Geox: string;
-    public Init: string;
+    public Name!: string;
+    public Surn!: string;
+    public Patr!: string;
+    public Geox!: string;
+    public Init!: string;
 
-    constructor(grammemes, str) {
-        let par;
+    constructor(grammemes: any, str: string) {
+        let par: string | undefined;
         const pair = str.split(' ');
-        this.stat = pair[0].split(',');
+        if (pair.length !== 2) {
+            throw new Error('Invalid input format');
+        }
+        this.stat = pair[0]!.split(',');
         this.flex = pair[1] ? pair[1].split(',') : [];
+        if ((this.stat === undefined) || (this.flex === undefined)) {
+            throw new Error('Invalid input format');
+        }
         for (let j = 0; j < 2; j++) {
-            let grams = this[['stat', 'flex'][j]];
+            // TypeScript is too dumb to understand that ['stat', 'flex'][j] always resolves to either 'stat' or 'flex'. 
+            // let grams = this[['stat', 'flex'][j]];
+            let grams = (j == 0)? this.stat : this.flex;
+
             for (let i = 0; i < grams.length; i++) {
-                let gram = grams[i];
-                this[gram] = true;
-                // loc2 -> loct -> CAse
-                while (grammemes[gram] && (par = grammemes[gram].parent)) {
-                    this[par] = gram;
-                    gram = par;
+                let gram = grams[i] as string;
+                if (grammemes[gram]) {
+                    (this as any)[gram] = true;
+                    // loc2 -> loct -> CAse
+                    while (grammemes[gram] && (par = grammemes[gram].parent)) {
+                        (this as any)[par] = gram;
+                        gram = par;
+                    }
                 }
             }
         }
@@ -59,6 +70,7 @@ export class Tag {
             this.POS = this.POST;
         }
     }
+
 
     /**
      * Возвращает текстовое представление тега.
@@ -93,35 +105,38 @@ export class Tag {
      * @returns {boolean} Является ли текущий тег согласованным с указанным.
      */
     // TODO: научиться понимать, что некоторые граммемы можно считать эквивалентными при сравнении двух тегов (вариации падежей и т.п.)
-    public matches(tag: string[] | Tag, grammemes: any) {
+    public matches(tag: string[] | Tag, grammemes: string[] | { [key: string]: string[] | boolean }): boolean {
         if (!grammemes) {
             if (Array.isArray(tag)) {
                 for (let i = 0; i < tag.length; i++) {
-                    if (!this[tag[i]]) {
+                    if (!(this as any)[tag[i]!]) {
                         return false;
                     }
                 }
                 return true;
-            } else
+            } else {
                 // Match to map
                 for (let k in tag) {
-                    if (Array.isArray(tag[k])) {
-                        if (!tag[k].indexOf(this[k])) {
-                            return false;
-                        }
-                    } else {
-                        if (tag[k] != this[k]) {
-                            return false;
+                    if ((tag as any)[k] !== undefined) {
+                        if (Array.isArray((tag as any)[k])) {
+                            if (((tag as any)[k] as string[]).indexOf((this as any)[k]) === -1) {
+                                return false;
+                            }
+                        } else {
+                            if ((tag as any)[k] !== (this as any)[k]) {
+                                return false;
+                            }
                         }
                     }
                 }
-            return true;
+                return true;
+            }
         }
 
         // Match to another tag
-        for (let i = 0; i < grammemes.length; i++) {
-            if (tag[grammemes[i]] != this[grammemes[i]]) {
-                // Special case: tag.CAse
+        for (let i = 0; i < (grammemes as string[]).length; i++) {
+            let gramIndex = (grammemes as string[])[i];
+            if ((tag as any)[gramIndex!] !== (this as any)[gramIndex!]) {
                 return false;
             }
         }

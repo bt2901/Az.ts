@@ -1,44 +1,27 @@
 import { Dawg } from './dawg';
 import { Tag } from './tag';
+import { Grammeme, Files, ParseResult, defaults } from './types';
 import { getParsers } from './parsers';
 
-const defaults = {
-    ignoreCase: true,
-    parsers: [
-        'Dictionary?',
-        'PrefixKnown',
-        'PrefixUnknown?',
-        'SuffixKnown?',
-    ],
-    forceParse: false,
-    normalizeScore: true
-};
 
 export class AzClass {
-    private initialized: boolean;
-    private knownPrefixes: string[];
-    private prefixes: string[];
-    private particles: string[];
+    private initialized: boolean = false;
+    private knownPrefixes: string[] = [];
+    private prefixes: string[] = [];
+    private particles: string[] = [];
     private replacements?: string[][];
-    private words: Dawg;
-    private predictionSuffixes: Dawg[];
+    private words!: Dawg;
+    private predictionSuffixes: Dawg[] = [];
     private probabilities?: Dawg;
-    private grammemes: {
-        [key: string]: {
-            internal: string,
-            parent: string,
-            external: string,
-            externalFull: string,
-        },
-    };
-    private tags;
-    private config;
-    private suffixes: string[];
-    private paradigms: Uint16Array[];
-    private parsers;
+    private grammemes: { [key: string]: Grammeme } = {};
 
-    public init(files) {
-        this.initialized = false;
+    private tags: Tag[] = [];
+    private config: typeof defaults = defaults;
+    private suffixes: string[] = [];
+    private paradigms: Uint16Array[] = [];
+    private parsers: { [key: string]: (word: string, config: any) => ParseResult[] } = {};
+
+    public init(files: Files) {
 
         this.knownPrefixes = files['config.json'].knownPrefixes;
         this.prefixes = files['config.json'].prefixes;
@@ -57,33 +40,36 @@ export class AzClass {
             this.probabilities = new Dawg(files['p_t_given_w.intdawg'], 'int');
         }
 
-        this.grammemes = {};
-
-        const grammemesJson = files['grammemes.json'];
-
-        this.grammemes = grammemesJson.reduce((all, [internal, parent, external, externalFull]) => {
-            const grammeme = {
-                internal, parent, external, externalFull,
-            };
+        this.grammemes = (files['grammemes.json'] || []).reduce((all: { [key: string]: Grammeme }, [internal, parent, external, externalFull]: string[]) => {
+            if (internal === undefined || parent === undefined || external === undefined || externalFull === undefined || // Check if any value is undefined
+                internal === '' || parent === '' || external === '' || externalFull === '') { // Check if any value is an empty string
+                throw new Error('Grammeme file is corrupted: Missing or empty values.');
+            }
+            const grammeme: Grammeme = { internal, parent, external, externalFull };
 
             return {
                 ...all,
-                [internal]: grammeme,
-                [external]: grammeme,
+                [internal as string]: grammeme,
+                [external as string]: grammeme,
             };
         }, {});
 
-        this.tags = files['gramtab-opencorpora-int.json'].map((tag) => new Tag(this.grammemes, tag));
+
+        this.tags = files['gramtab-opencorpora-int.json'].map((tag: string) => new Tag(this.grammemes, tag));
         this.suffixes = files['suffixes.json'];
 
         const list = new Uint16Array(files['paradigms.array']);
         const count = list[0];
+        if (count === undefined) {
+            throw new Error('Paradigms array is corrupted: Missing count value.');
+        }
         let pos = 1;
 
-        this.paradigms = [];
         for (let i = 0; i < count; i++) {
             const size = list[pos++];
-
+            if (size === undefined) {
+                throw new Error('Paradigms array is corrupted: Missing size value.');
+            }
             this.paradigms.push(list.subarray(pos, pos + size));
             pos += size;
         }
@@ -105,43 +91,46 @@ export class AzClass {
         return this;
     }
 
-    public morph(word, config) {
+    public morph(word: string, config?: typeof defaults) {
         if (!this.initialized) {
             throw new Error('Please call Az.Morph.init() before using this module.');
         }
 
-        this.config = config ? Object.assign(defaults, config) : defaults;
+        this.config = config ? { ...defaults, ...config } : defaults;
 
-        var parses = [];
-        var matched = false;
-        for (var i = 0; i < this.config.parsers.length; i++) {
-            var name = this.config.parsers[i];
-            var terminal = name[name.length - 1] != '?';
-            name = terminal ? name : name.slice(0, -1);
+        const parses: ParseResult[] = [];
+        let matched = false;
+        for (const unnsureName of this.config.parsers) {
+            const terminal = unnsureName[unnsureName.length - 1] !== '?';
+            const parserName = terminal ? unnsureName : unnsureName.slice(0, -1);
 
-            var vars = this.parsers[name](word, this.config);
-            for (var j = 0; j < vars.length; j++) {
-                vars[j].parser = name;
-                matched = true;
-            }
+            const parserFunction = this.parsers[parserName];
+            if (parserFunction) {
+                const vars = parserFunction(word, this.config);
+                for (const variable of vars) {
+                    variable.parser = parserName;
+                    matched = true;
+                }
 
-            parses = parses.concat(vars);
-            if (matched && terminal) {
-                break;
+                parses.push(...vars);
+                if (matched && terminal) {
+                    break;
+                }
+            } else {
+                throw new Error(`Unknown parser named ${parserName}!`);
             }
         }
-
         let total = 0;
-        for (let i = 0; i < parses.length; i++) {
-            if (parses[i].parser == 'Dictionary') {
-                const rawScore = this.probabilities?.getInt(parses[i] + ':' + parses[i].tag);
+        for (const parse of parses) {
+            if (parse.parser === 'Dictionary') {
+                const rawScore = this.probabilities?.getInt(`${parse}:${parse.tag}`);
 
-                if (typeof rawScore !== undefined) {
-                    parses[i].score = rawScore / 1000000;
-                    total += parses[i].score;
+                if (typeof rawScore !== 'undefined') {
+                    parse.score = rawScore / 1000000;
+                    total += parse.score;
                 } else {
-                    parses[i].score = 1;
-                    total += parses[i].score;
+                    parse.score = 1;
+                    total += parse.score;
                 }
             }
         }
@@ -149,23 +138,23 @@ export class AzClass {
         // Normalize Dictionary & non-Dictionary scores separately
         if (this.config.normalizeScore) {
             if (total > 0) {
-                for (var i = 0; i < parses.length; i++) {
-                    if (parses[i].parser == 'Dictionary') {
-                        parses[i].score /= total;
+                for (const parse of parses) {
+                    if (parse.parser === 'Dictionary') {
+                        parse.score /= total;
                     }
                 }
             }
 
             total = 0;
-            for (var i = 0; i < parses.length; i++) {
-                if (parses[i].parser != 'Dictionary') {
-                    total += parses[i].score;
+            for (const parse of parses) {
+                if (parse.parser !== 'Dictionary') {
+                    total += parse.score;
                 }
             }
             if (total > 0) {
-                for (var i = 0; i < parses.length; i++) {
-                    if (parses[i].parser != 'Dictionary') {
-                        parses[i].score /= total;
+                for (const parse of parses) {
+                    if (parse.parser !== 'Dictionary') {
+                        parse.score /= total;
                     }
                 }
             }
@@ -177,7 +166,7 @@ export class AzClass {
     }
 }
 
-let instance;
+let instance: AzClass;
 
 function getInstance() {
     if (!instance) {

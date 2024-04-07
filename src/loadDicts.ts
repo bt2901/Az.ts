@@ -1,3 +1,5 @@
+import { Files } from './types';
+
 const files = [
     'grammemes.json',
     'gramtab-opencorpora-int.json',
@@ -13,7 +15,7 @@ const files = [
     'config.json',
 ];
 
-export function loadDicts(dir, callback) {
+export function loadDicts(dir: string, callback: (data: Files) => void): void {
     Promise.all(files.map((name) => (
         fetch(`${dir}/${name}`).then((res) => {
             if (!res.ok) {
