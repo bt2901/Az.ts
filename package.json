@@ -52,6 +52,7 @@
     "merge-stream": "^1.0.0",
     "sinon": "^1.17.3",
     "typescript": "^4.8.4"
+    "dawgjs": "^0.1.4",
   },
   "config": {
     "blanket": {
