@@ -2,6 +2,7 @@ import { Dawg } from './dawg';
 import { Tag } from './tag';
 import { Grammeme, Files, ParseResult, defaults } from './types';
 import { getParsers } from './parsers';
+import { DictionaryParse } from "./dictionaryParse";
 
 
 export class AzClass {
@@ -19,7 +20,7 @@ export class AzClass {
     private config: typeof defaults = defaults;
     private suffixes: string[] = [];
     private paradigms: Uint16Array[] = [];
-    private parsers: { [key: string]: (word: string, config: any) => ParseResult[] } = {};
+    private parsers: { [key: string]: (word: string, config: any) => DictionaryParse[] } = {};
 
     public init(files: Files) {
 
@@ -98,7 +99,7 @@ export class AzClass {
 
         this.config = config ? { ...defaults, ...config } : defaults;
 
-        const parses: ParseResult[] = [];
+        const parses: DictionaryParse[] = [];
         let matched = false;
         for (const unnsureName of this.config.parsers) {
             const terminal = unnsureName[unnsureName.length - 1] !== '?';

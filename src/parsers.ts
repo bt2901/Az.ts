@@ -11,11 +11,11 @@ export function getParsers(
     prefixes: string[],
     suffixes: string[],
     predictionSuffixes: Dawg[],
-    replacements: string[][],
+    replacements: string[][] | undefined,
     particles: string[],
     knownPrefixes: string[],
 ) {
-    const Parsers: { [key: string]: (word: string, config: any) => ParseResult[] } = {}
+    const Parsers: { [key: string]: (word: string, config: any) => DictionaryParse[] } = {}
 
     Parsers['Dictionary'] = function (word: string, config: typeof defaults) {
         config = config ? { ...defaults, ...config } : defaults;
@@ -28,22 +28,23 @@ export function getParsers(
         var opts = words.findAll(word,replacements);
 
         var vars = [];
-        for (var i = 0; i < opts.length; i++) {
-            for (var j = 0; j < opts[i][1]!.length; j++) {
+        for (var opts_entry of opts) {
+            for (var entry of opts_entry![1]) {
                 var w = new DictionaryParse(
                     paradigms,
                     tags,
                     prefixes,
                     suffixes,
-                    opts[i][0],
-                    opts[i][1][j][0],
-                    opts[i][1][j][1],
+                    opts_entry![0],
+                    entry[0],
+                    entry[1],
                 );
                 if (config.ignoreCase || !w.tag.isCapitalized() || isCapitalized) {
                     vars.push(w);
                 }
             }
         }
+
         return vars;
     }
 
@@ -55,14 +56,14 @@ export function getParsers(
             (word.substr(1).toLocaleUpperCase() != word.substr(1));
         word = word.toLocaleLowerCase();
         var parses = [];
-        for (var i = 0; i < knownPrefixes.length; i++) {
-            if (word.length - knownPrefixes[i]!.length < 3) {
+        for (const knownPref of knownPrefixes) {
+            if (word.length - knownPref.length < 3) {
                 continue;
             }
 
-            if (word.substr(0, knownPrefixes[i]!.length) == knownPrefixes[i]) {
-                var end = word.substr(knownPrefixes[i]!.length);
-                const right = Parsers['Dictionary'](end, config);
+            if (word.substr(0, knownPref.length) == knownPref) {
+                var end = word.substr(knownPref.length);
+                const right = Parsers['Dictionary']!(end, config);
                 for (const entry of right) {
                     if (!entry.tag || !entry.tag.isProductive()) {
                         continue;
@@ -71,7 +72,7 @@ export function getParsers(
                         continue;
                     }
                     entry.score *= 0.7;
-                    entry.prefix = knownPrefixes[i];
+                    entry.prefix = knownPref;
                     parses.push(entry);
                 }
 
@@ -93,7 +94,7 @@ export function getParsers(
                 break;
             }
             var end = word.substr(len);
-            const right = Parsers['Dictionary'](end, config);
+            const right = Parsers['Dictionary']!(end, config);
             for (const entry of right) {
                 if (!entry.tag || !entry.tag.isProductive()) {
                     continue;
@@ -123,7 +124,7 @@ export function getParsers(
         var parses = [];
         var minlen = 1;
         var coeffs = [0, 0.2, 0.3, 0.4, 0.5, 0.6];
-        var used = {};
+        const used: { [key: string]: boolean } = {};
         for (var i = 0; i < prefixes.length; i++) {
             if (prefixes[i]!.length && (word.substr(0, prefixes[i]!.length) != prefixes[i])) {
                 continue;
@@ -148,15 +149,18 @@ export function getParsers(
                     const suffix = entry![0];
                     const stats = entry![1];
 
-                    for (var k = 0; k < stats.length; k++) {
+                    for (const stats_entry of stats) {
+                        if (stats_entry.length < 3) {
+                          throw new Error('Corrupted data!');
+                        }
                         var parse = new DictionaryParse(
                             paradigms,
                             tags,
                             prefixes,
                             suffixes,
                             prefixes[i] + left + suffix,
-                            stats[k][1],
-                            stats[k][2],
+                            stats_entry[1],
+                            stats_entry[2],
                             );
                         // Why there is even non-productive forms in suffix DAWGs?
                         if (!parse.tag || !parse.tag.isProductive()) {
@@ -165,19 +169,19 @@ export function getParsers(
                         if (!config.ignoreCase && parse.tag.isCapitalized() && !isCapitalized) {
                             continue;
                         }
-                        var key = parse.toString() + ':' + stats[k][1] + ':' + stats[k][2];
+                        const key = parse.toString() + ':' + stats_entry[1] + ':' + stats_entry[2];
                         if (key in used) {
                             continue;
                         }
-                        max = Math.max(max, stats[k][0]);
-                        parse.score = stats[k][0] * coeffs[len];
+                        max = Math.max(max, stats_entry[0]);
+                        parse.score = stats_entry![0] * (coeffs[len] as number);
                         p.push(parse);
                         used[key] = true;
                     }
                 }
                 if (p.length > 0) {
-                    for (var j = 0; j < p.length; j++) {
-                        p[j].score /= max;
+                    for (let p_entry of p) {
+                        p_entry.score /= max;
                     }
                     parses.push(...p);
                     // Check also suffixes 1 letter shorter

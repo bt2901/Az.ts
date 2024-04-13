@@ -8,19 +8,20 @@ import { encodeUtf8 } from 'dawgjs/codec';
 
 export class Dawg {
     private format;
-    private dawgjs;
+    private dawgjs_map;
+    private dawgjs_byte;
 
     constructor(buffer: ArrayBuffer, format: string) {
         this.format = format;
 
         if (format === 'words') {
-            this.dawgjs = readStringMapDawg(buffer, this.deserializerWord, 1, true);
+            this.dawgjs_map = readStringMapDawg(buffer, this.deserializerWord, 1, true);
         }
         if (format === 'probs') {
-            this.dawgjs = readStringMapDawg(buffer, this.deserializerProbs, 1, true);
+            this.dawgjs_map = readStringMapDawg(buffer, this.deserializerProbs, 1, true);
         }
         if (format === 'int') {
-            this.dawgjs = readByteCompletionDawg(buffer);
+            this.dawgjs_byte = readByteCompletionDawg(buffer);
         }
     }
     public findAll(str: string, replaces?: string[][]) {
@@ -32,9 +33,12 @@ export class Dawg {
         return results.filter(Boolean);
     }
     public getInt(str: string): number | undefined {
-        const index = this.dawgjs?.dictionary?.followBytes(encodeUtf8(str));
-        const hasValue = this.dawgjs?.dictionary?.hasValue(index);
-        const value = this.dawgjs?.dictionary?.value(index) ^ (1 << 31);
+        if (this.format === 'probs' || this.format === 'words' || typeof this.dawgjs_map === 'undefined') {
+            throw new Error('You are trying to access wrong DAWG type.');
+        }
+        const index = this.dawgjs_map.dawg.dawg.dictionary!.followBytes(encodeUtf8(str));
+        const hasValue = this.dawgjs_map.dawg.dawg.dictionary!.hasValue(index);
+        const value = this.dawgjs_map.dawg.dawg.dictionary!.value(index) ^ (1 << 31);
 
         if (hasValue && typeof value !== 'undefined') {
             return value;
@@ -42,8 +46,11 @@ export class Dawg {
         return undefined;
     }
 
-    private getStr(str: string) {
-        const indexes = this.dawgjs.getArray(str);
+    private getStr(str: string): any[] | undefined {
+        if (this.format === 'int' || typeof this.dawgjs_map === 'undefined') {
+            throw new Error('You are trying to access wrong DAWG type.');
+        }
+        const indexes = this.dawgjs_map.getArray(str);
 
         if (indexes.length) {
             return [
