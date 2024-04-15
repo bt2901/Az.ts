@@ -1,2 +1,2 @@
 export { Az } from './az';
-export { loadDicts } from './loadDicts';
+export { loadDicts, files } from './loadDicts';

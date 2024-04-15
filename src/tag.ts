@@ -41,13 +41,16 @@ export class Tag {
     constructor(grammemes: any, str: string) {
         let par: string | undefined;
         const pair = str.split(' ');
-        if (pair.length !== 2) {
-            throw new Error('Invalid input format');
+        if (pair.length === 2) {
+            this.stat = pair[0]!.split(',');
+            this.flex = pair[1]!.split(',');
+            // throw new Error(`Invalid input format: ${str} splits to ${pair}`);
+        } else {
+            this.stat = pair[0]!.split(',');
+            this.flex = [];
         }
-        this.stat = pair[0]!.split(',');
-        this.flex = pair[1] ? pair[1].split(',') : [];
         if ((this.stat === undefined) || (this.flex === undefined)) {
-            throw new Error('Invalid input format');
+            throw new Error(`Invalid input format: ${pair} has ${this.stat} or ${this.flex} undefined`);
         }
         for (let j = 0; j < 2; j++) {
             // TypeScript is too dumb to understand that ['stat', 'flex'][j] always resolves to either 'stat' or 'flex'. 

@@ -1,6 +1,6 @@
 import { Files } from './types';
 
-const files = [
+export const files = [
     'grammemes.json',
     'gramtab-opencorpora-int.json',
     'meta.json',

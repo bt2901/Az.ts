@@ -33,12 +33,15 @@ export class Dawg {
         return results.filter(Boolean);
     }
     public getInt(str: string): number | undefined {
-        if (this.format === 'probs' || this.format === 'words' || typeof this.dawgjs_map === 'undefined') {
+        // yes, Az.probabilities.format == "int"
+        // while Az.predictionSuffixes[i].format == "probs"
+        // go figure
+        if (this.format === 'probs' || this.format === 'words' || typeof this.dawgjs_byte === 'undefined') {
             throw new Error('You are trying to access wrong DAWG type.');
         }
-        const index = this.dawgjs_map.dawg.dawg.dictionary!.followBytes(encodeUtf8(str));
-        const hasValue = this.dawgjs_map.dawg.dawg.dictionary!.hasValue(index);
-        const value = this.dawgjs_map.dawg.dawg.dictionary!.value(index) ^ (1 << 31);
+        const index = this.dawgjs_byte.dictionary!.followBytes(encodeUtf8(str));
+        const hasValue = this.dawgjs_byte.dictionary!.hasValue(index);
+        const value = this.dawgjs_byte.dictionary!.value(index) ^ (1 << 31);
 
         if (hasValue && typeof value !== 'undefined') {
             return value;

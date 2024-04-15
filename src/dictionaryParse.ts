@@ -118,4 +118,7 @@ export class DictionaryParse {
             return this.word + this.suffix;
         }
     }
+    public normalize(keepPOS: boolean): DictionaryParse | false {
+        return this.inflect(keepPOS ? { POS: this.tag.POS } : 0);
+    }
 }

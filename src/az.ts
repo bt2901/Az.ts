@@ -42,8 +42,7 @@ export class AzClass {
         }
 
         this.grammemes = (files['grammemes.json'] || []).reduce((all: { [key: string]: Grammeme }, [internal, parent, external, externalFull]: string[]) => {
-            if (internal === undefined || parent === undefined || external === undefined || externalFull === undefined || // Check if any value is undefined
-                internal === '' || parent === '' || external === '' || externalFull === '') { // Check if any value is an empty string
+            if (internal === undefined || parent === undefined || external === undefined || externalFull === undefined) { // Check if any value is undefined
                 throw new Error('Grammeme file is corrupted: Missing or empty values.');
             }
             const grammeme: Grammeme = { internal, parent, external, externalFull };
