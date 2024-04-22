@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Token Analyzer</title>
+<script type="module" src="dist/azbundle.js"></script>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+    }
+    #container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 50px;
+    }
+    #input-tokens {
+        width: 80%;
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-bottom: 20px;
+    }
+    .token {
+        cursor: pointer;
+        margin-right: 5px;
+    }
+    .language-tab {
+        cursor: pointer;
+        margin: 0 10px;
+        color: blue;
+    }
+    #analysis {
+        width: 80%;
+        border: 1px solid #ccc;
+        padding: 10px;
+        display: none;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    th, td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+    .highlight-red {
+        color: red;
+    }
+    .highlight-blue {
+        color: blue;
+    }
+    .highlight-white {
+        color: white;
+    }
+    .highlight-yellow {
+        color: yellow;
+    }
+
+    .morph-ADJF {
+      background: #FFBFBF;
+    }
+    .morph-ADJS {
+      background: #FF8686;
+    }
+    .morph-VERB {
+      background: #B1BEFF;
+    }
+    .morph-NOUN {
+      background: #A1EF82;;
+    }
+    .morph-ambig-VERBNOUN {
+      background: repeating-linear-gradient(
+        45deg,
+        #A1EF82,
+        #A1EF82 10px,
+        #B1BEFF 10px,
+        #B1BEFF 20px
+      );
+    }
+    .speculative { 
+      color: #888;
+    }
+    .token-space {
+      background: #ECECEC;
+    }
+
+</style>
+</head>
+<body>
+<div id="container">
+    <div id="input-tokens"></div>
+    <div id="language-tabs">
+        <span class="language-tab" data-lang="rus">Russian</span>
+        <span class="language-tab" data-lang="ukr">Ukrainian</span>
+        <span class="language-tab" data-lang="isv">Interslavic</span>
+    </div>
+    <div id="analysis"></div>
+</div>
+
+<script>
+
+    const languageSentences = {
+        rus: "Пора зажечь печь, потому что знать хочет есть",
+        ukr: "Як мати мати, що ставить в шахах такі мати, то в неї брати мої уроки можуть брати.",
+        isv: "Žena vidi dobrogo muža, ktory metal kamenje v dȯžd."
+    };
+    const alphanumeric = /^[\p{L}]+$/u;
+
+    const inputTokensContainer = document.getElementById('input-tokens');
+    const languageTabs = document.querySelectorAll('.language-tab');
+    const analysisContainer = document.getElementById('analysis');
+    function splitText(text) {
+        return text.split(/(\,|\.|\?|\!|\s|\(|\)|\[|\]|\{|\}|\"|\'|-)/).filter(Boolean);
+    }
+    window.Az = {}
+
+    // Add event listeners to language tabs
+    languageTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const lang = tab.dataset.lang;
+            inputTokensContainer.innerHTML = '';
+            languageTabs.forEach(t => t.style.color = 'blue');
+            tab.style.color = 'red';
+            languageTabs.forEach(t => t.style.fontWeight = 'normal');
+            tab.style.fontWeight = 'bold';
+            const sentence = languageSentences[lang];
+
+            // Populate input tokens
+            splitText(sentence).forEach(token => {
+                const span = document.createElement('span');
+                const tokenType = token.match(alphanumeric) ? 'WORD' : 'space';
+                if (tokenType == 'WORD') {
+                    // const tokenPos = window.Az[lang].morph(token)[0].tag.POST
+                    const theParse = window.Az[lang].morph(token);
+
+                    const tokenPosVars = new Set(theParse.map(p => {return p.tag.POS}))
+                    let tokenPos = "UNKN";
+                    if (tokenPosVars.has("NOUN") && tokenPosVars.has("VERB")) {
+                        tokenPos = "ambig-VERBNOUN"
+                    } else {
+                        //if (tokenPosVars.length === 1) {
+                        tokenPos = Array.from(tokenPosVars)[0];
+                    }
+                    span.classList.add("morph-" + tokenPos);
+                }
+                span.classList.add('token');
+                span.classList.add("token-" + tokenType);
+                span.textContent = token;
+                inputTokensContainer.appendChild(span);
+            });
+        });
+    });
+
+    // Add event listener to input tokens
+    inputTokensContainer.addEventListener('click', (event) => {
+        const tokenText = event.target.textContent.trim();
+        const lang = Array.from(languageTabs).filter((t => t.style.color == 'red'))[0].dataset.lang;
+
+        if (tokenText && tokenText.split(" ").length == 1) {
+            const tokenData = window.Az[lang].morph(tokenText);
+            const table = document.createElement('table');
+            tokenData.forEach(data => {
+                const row = document.createElement('tr');
+                const cell_para_id = document.createElement('td');
+                const cell_lemma = document.createElement('td');
+                cell_para_id.textContent = data.paradigmIdx;
+                cell_lemma.textContent = data.normalize().word;
+
+                row.appendChild(cell_para_id);
+                row.appendChild(cell_lemma);
+                const ud_dict = data.tag.ud_dict();
+                for (key in ud_dict) {
+                    const cell = document.createElement('td');
+                    const val = ud_dict[key].trim();
+                    cell.textContent = key + "=" + val;
+                    if (key === "PoS") {
+                        cell.classList.add("morph-" + val);
+                    }
+                    row.appendChild(cell);
+                };
+                if (data.parser !== "Dictionary") {
+                        row.classList.add("speculative");
+                }
+                table.appendChild(row);
+            });
+            analysisContainer.innerHTML = tokenText;
+            // analysisContainer.innerHTML = "";
+            analysisContainer.appendChild(table);
+            analysisContainer.style.display = 'block';
+        }
+    });
+    // TODO: don't do this
+    setTimeout(function () {
+        ['isv', 'rus', 'ukr'].forEach(lang => {
+            AzModule.loadDicts(lang, function(e) {
+                            let Az = new AzModule.Az();
+                            window.Az[lang] = Az.init(e);
+            })
+        })
+    }, 500);
+
+
+</script>
+</body>
+</html>

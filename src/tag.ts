@@ -1,3 +1,15 @@
+interface UdDictResult {
+    PoS?: string;
+    Case?: string;
+    Animacy?: string;
+    Number?: string;
+    Person?: string;
+    Aspect?: string;
+    VerbForm?: string;
+    Gender?: string;
+    // Add more properties if needed
+}
+
 /**
  * Тег. Содержит в себе информацию о конкретной форме слова, но при этом
  * к конкретному слову не привязан. Всевозможные значения тегов переиспользуются
@@ -16,21 +28,7 @@ export class Tag {
     public stat: string[];
     public flex: string[];
 
-    public POS!: boolean;
-    public POST!: boolean;
-    public NUMR!: boolean;
-    public NPRO!: boolean;
-    public PRED!: boolean;
-    public PREP!: boolean;
-    public CONJ!: boolean;
-    public PRCL!: boolean;
-    public INTJ!: boolean;
-    public Apro!: boolean;
-    public NUMB!: boolean;
-    public ROMN!: boolean;
-    public LATN!: boolean;
-    public PNCT!: boolean;
-    public UNKN!: boolean;
+    public POS!: string;
 
     public Name!: string;
     public Surn!: string;
@@ -69,9 +67,7 @@ export class Tag {
                 }
             }
         }
-        if ('POST' in this) {
-            this.POS = this.POST;
-        }
+        this.POS = (this.ud_dict()["PoS"] as string);
     }
 
 
@@ -146,22 +142,58 @@ export class Tag {
         return true;
     }
 
+    public ud_dict(): UdDictResult {
+        const result: UdDictResult = {};
+        const gramSet = (this.stat + "," + this.flex).split(",");
+
+        const PosSet = new Set([
+            "NOUN", "NPRO", "VERB", "ADJF", "PRTF", "ADVB", "GRND", "PREP", "PRED", "Prnt", "CONJ", "PRCL", "INTJ", "NUMR",
+            "PRCL", "Apro",
+            "ADJS", "COMP", "VERB", "INFN", "PRTS", 
+        ]);
+        const CasesSet = new Set(["nomn", "gent", "datv", "accs", "ablt", "inst", "loct", "voct", "loc2", "gen2"]);
+        const PerSet = new Set(["1per", "2per", "3per", "0per"]);
+        const GenderSet = new Set(["masc", "neut", "femn"]);
+        const TenseSet = new Set(["past", "futr", "imperfect", "cond", "pres"]);
+        const MoodSet = new Set(["impr"]);
+        const AspectSet = new Set(["perf", "impf"]);
+        for (const gramName of gramSet) {
+           if (PosSet.has(gramName)) {
+                result["PoS"] = gramName;
+                if (gramName == "VERB") {
+                    result["VerbForm"] = "Fin";
+                };
+                if (gramName == "INFN") {
+                    result["VerbForm"] = "Inf";
+                    result["PoS"] = "VERB";
+                };
+           }
+           if (CasesSet.has(gramName)) {
+                result["Case"] = gramName;
+           }
+           if (AspectSet.has(gramName)) {
+                result["Aspect"] = gramName;
+           }
+           if (gramName === "inan" || gramName === "anim" ) {
+                result["Animacy"] = gramName;
+           }
+           if (gramName === "plur" || gramName === "sing" ) {
+                result["Number"] = gramName;
+           }
+           if (PerSet.has(gramName)) {
+                result["Person"] = gramName;
+           }
+           if (GenderSet.has(gramName)) {
+                result["Gender"] = gramName;
+           }
+        }
+        return result;
+    }
+
     public isProductive() {
-        return !(
-            this.NUMR ||
-            this.NPRO ||
-            this.PRED ||
-            this.PREP ||
-            this.CONJ ||
-            this.PRCL ||
-            this.INTJ ||
-            this.Apro ||
-            this.NUMB ||
-            this.ROMN ||
-            this.LATN ||
-            this.PNCT ||
-            this.UNKN
-        );
+        const NonProdSet = new Set(["NUMR", "NPRO", "PRED", "PREP", "CONJ", "PRCL", "INTJ", "Apro", "NUMB", "ROMN", "LATN", "PNCT", "UNKN"]);
+
+        return !(NonProdSet.has(this.POS));
     }
 
     public isCapitalized() {

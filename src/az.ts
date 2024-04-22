@@ -165,7 +165,9 @@ export class AzClass {
         return parses;
     }
 }
+export const Az = AzClass;
 
+/*
 let instance: AzClass;
 
 function getInstance() {
@@ -177,3 +179,4 @@ function getInstance() {
 }
 
 export const Az = getInstance();
+*/
