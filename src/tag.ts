@@ -50,10 +50,8 @@ export class Tag {
         if ((this.stat === undefined) || (this.flex === undefined)) {
             throw new Error(`Invalid input format: ${pair} has ${this.stat} or ${this.flex} undefined`);
         }
-        for (let j = 0; j < 2; j++) {
-            // TypeScript is too dumb to understand that ['stat', 'flex'][j] always resolves to either 'stat' or 'flex'. 
-            // let grams = this[['stat', 'flex'][j]];
-            let grams = (j == 0)? this.stat : this.flex;
+        for (const prop of (['stat', 'flex'] as const)) {
+            const grams = this[prop];
 
             for (let i = 0; i < grams.length; i++) {
                 let gram = grams[i] as string;

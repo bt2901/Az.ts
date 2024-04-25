@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Token Analyzer</title>
-<script type="module" src="dist/azbundle.js"></script>
+<link href="spinner.css" rel="stylesheet">
 <style>
     body {
-        font-family: Arial, sans-serif;
+        font-family: Roboto, sans-serif;
         margin: 0;
         padding: 0;
     }
@@ -24,8 +24,15 @@
         margin-bottom: 20px;
     }
     .token {
+        border-radius: 3px;
+        margin: 1px;
+        padding: 0 3px;
+        position: relative;
         cursor: pointer;
-        margin-right: 5px;
+    }
+    .show_para {
+        cursor: pointer;
+        background-color: #f2f5fa;
     }
     .language-tab {
         cursor: pointer;
@@ -33,6 +40,12 @@
         color: blue;
     }
     #analysis {
+        width: 80%;
+        border: 1px solid #ccc;
+        padding: 10px;
+        display: none;
+    }
+    #paradigm {
         width: 80%;
         border: 1px solid #ccc;
         padding: 10px;
@@ -49,6 +62,9 @@
     }
     th {
         background-color: #f2f2f2;
+    }
+    .matches {
+        font-weight: bold;
     }
     .highlight-red {
         color: red;
@@ -94,17 +110,31 @@
 </style>
 </head>
 <body>
-<div id="container">
-    <div id="input-tokens"></div>
+
+<div class="spinner">
+  <p class="spinner-text">
+  </p>
+  <div class="circle circle-1"></div>
+  <div class="circle circle-2"></div>
+  <div class="circle circle-3"></div>
+  <div class="circle circle-4"></div>
+</div>
+
+<div id="container" style="display: none;">
     <div id="language-tabs">
         <span class="language-tab" data-lang="rus">Russian</span>
         <span class="language-tab" data-lang="ukr">Ukrainian</span>
         <span class="language-tab" data-lang="isv">Interslavic</span>
     </div>
+    <div id="input-tokens"></div>
     <div id="analysis"></div>
+    <div id="paradigm"></div>
 </div>
 
-<script>
+<script type="module">
+
+    import { loadDicts, AzClass } from "./dist/azbundle.js";
+    window.loadDicts = loadDicts;
 
     const languageSentences = {
         rus: "Пора зажечь печь, потому что знать хочет есть",
@@ -113,9 +143,13 @@
     };
     const alphanumeric = /^[\p{L}]+$/u;
 
+    const everythingContainer = document.getElementById('container');
+    const spinnerContainer = document.getElementById('spinner');
+
     const inputTokensContainer = document.getElementById('input-tokens');
     const languageTabs = document.querySelectorAll('.language-tab');
     const analysisContainer = document.getElementById('analysis');
+    const paradigmContainer = document.getElementById('paradigm');
     function splitText(text) {
         return text.split(/(\,|\.|\?|\!|\s|\(|\)|\[|\]|\{|\}|\"|\'|-)/).filter(Boolean);
     }
@@ -168,22 +202,53 @@
             const table = document.createElement('table');
             tokenData.forEach(data => {
                 const row = document.createElement('tr');
+                const cell_show_all = document.createElement('td');
                 const cell_para_id = document.createElement('td');
                 const cell_lemma = document.createElement('td');
+                cell_show_all.textContent = '⎘';
+                cell_show_all.classList.add("show_para");
+
+                cell_show_all.addEventListener('click', function handleClick(event) {
+
+                    paradigmContainer.innerHTML = "";
+                    if (data.formCnt) {
+                        const table_para = document.createElement('table');
+                        for (var formIdx = 0; formIdx < data.formCnt; formIdx++) {
+                            var form = data.inflect(formIdx);
+                            const row = document.createElement('tr');
+                            const el_form = document.createElement('td');
+                            const el_gram = document.createElement('td');
+                            el_form.textContent = form.word;
+                            el_gram.textContent = form.tag.toString();
+                            if (form.word === data.word) {
+                              el_form.classList.add("matches");
+                            }
+                            row.appendChild(el_form);
+                            row.appendChild(el_gram);
+                            table_para.appendChild(row);
+                        }
+                        paradigmContainer.appendChild(table_para);
+                        paradigmContainer.style.display = 'block';
+                    }
+                });
                 cell_para_id.textContent = data.paradigmIdx;
                 cell_lemma.textContent = data.normalize().word;
 
+                row.appendChild(cell_show_all);
                 row.appendChild(cell_para_id);
                 row.appendChild(cell_lemma);
                 const ud_dict = data.tag.ud_dict();
-                for (key in ud_dict) {
+                for (const key in ud_dict) {
                     const cell = document.createElement('td');
                     const val = ud_dict[key].trim();
                     cell.textContent = key + "=" + val;
+                    // cell.innerHTML = '<abbr title="' + key + '=' + val + '>' + val + '</abbr>';
                     if (key === "PoS") {
                         cell.classList.add("morph-" + val);
                     }
                     row.appendChild(cell);
+                    // console.log(data.tag.toString());
+                    // console.log(data.formIdx, data.formCnt, data.paradigmIdx);
                 };
                 if (data.parser !== "Dictionary") {
                         row.classList.add("speculative");
@@ -198,14 +263,16 @@
     });
     // TODO: don't do this
     setTimeout(function () {
-        ['isv', 'rus', 'ukr'].forEach(lang => {
-            AzModule.loadDicts(lang, function(e) {
-                            let Az = new AzModule.Az();
+
+       ['isv', 'rus', 'ukr'].forEach(lang => {
+            window.loadDicts(lang, function(e) {
+                            let Az = new AzClass();
                             window.Az[lang] = Az.init(e);
             })
         })
+      everythingContainer.style.display = 'flex';
+      spinnerContainer.style.display = 'none';
     }, 500);
-
 
 </script>
 </body>

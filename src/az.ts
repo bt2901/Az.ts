@@ -165,7 +165,7 @@ export class AzClass {
         return parses;
     }
 }
-export const Az = AzClass;
+// export const Az = AzClass;
 
 /*
 let instance: AzClass;
