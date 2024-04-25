@@ -1,0 +1,26 @@
+{
+  "replacements2": [
+["e", ["ě", "ę", "ė"]]
+],
+  "replacements": [
+["a", "å"],
+["u", "ų"],
+["e", "ě"], 
+["č", "ć"],
+["o", "ȯ"],
+["n", "ń"], 
+["r", "ŕ"], 
+["l", "ľ"],
+["d", "ď"], 
+["s", "ś"], 
+["t", "ť"], 
+["z", "ź"]
+  ],
+  "particles": [],
+  "prefixes": ["", "po", "naj"],
+  "knownPrefixes": [
+    "do", "iz", "izpo", "nad", "na", "ne", "ob", "odpo", "od", "o", "prědpo",
+    "pod", "po", "prě", "pre", "pri", "pro", "råzpro", "razpro", "råz", "raz",
+    "sȯ", "s", "u", "vȯ", "vo", "v", "vȯz", "voz", "vy", "za"
+  ]
+}
