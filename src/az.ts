@@ -56,6 +56,14 @@ export class AzClass {
 
 
         this.tags = files['gramtab-opencorpora-int.json'].map((tag: string) => new Tag(this.grammemes, tag));
+        if (files['gramtab-opencorpora-ext.json']) {
+            let ext_tags = files['gramtab-opencorpora-ext.json'].map((tag: string) => new Tag(this.grammemes, tag));
+            this.tags.forEach((tag, i) => {
+                if (i < ext_tags.length) {
+                    tag.ext = ext_tags[i];
+                }
+            });
+        }
         this.suffixes = files['suffixes.json'];
 
         const list = new Uint16Array(files['paradigms.array']);
@@ -165,18 +173,4 @@ export class AzClass {
         return parses;
     }
 }
-// export const Az = AzClass;
 
-/*
-let instance: AzClass;
-
-function getInstance() {
-    if (!instance) {
-        instance = new AzClass();
-    }
-
-    return instance;
-}
-
-export const Az = getInstance();
-*/

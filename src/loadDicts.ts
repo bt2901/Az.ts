@@ -3,6 +3,7 @@ import { Files } from './types';
 export const files = [
     'grammemes.json',
     'gramtab-opencorpora-int.json',
+    'gramtab-opencorpora-ext.json',
     'meta.json',
     'p_t_given_w.intdawg',
     'paradigms.array',

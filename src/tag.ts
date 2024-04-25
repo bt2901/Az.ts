@@ -27,6 +27,7 @@ interface UdDictResult {
 export class Tag {
     public stat: string[];
     public flex: string[];
+    ext?: Tag;
 
     public POS!: string;
 

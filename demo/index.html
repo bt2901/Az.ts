@@ -12,10 +12,12 @@
         padding: 0;
     }
     #container {
+        margin-top: 50px;
+    }
+    #widget_container {
         display: flex;
         flex-direction: column;
         align-items: center;
-        margin-top: 50px;
     }
     #input-tokens {
         width: 80%;
@@ -33,6 +35,9 @@
     .show_para {
         cursor: pointer;
         background-color: #f2f5fa;
+        font-size: 25px;
+        text-align: center;
+        padding: 0px;
     }
     .language-tab {
         cursor: pointer;
@@ -110,8 +115,9 @@
 </style>
 </head>
 <body>
+<div id="container">
 
-<div class="spinner">
+<div class="spinner" id="spinner">
   <p class="spinner-text">
   </p>
   <div class="circle circle-1"></div>
@@ -120,7 +126,8 @@
   <div class="circle circle-4"></div>
 </div>
 
-<div id="container" style="display: none;">
+
+<div id="widget_container" style="display: none;">
     <div id="language-tabs">
         <span class="language-tab" data-lang="rus">Russian</span>
         <span class="language-tab" data-lang="ukr">Ukrainian</span>
@@ -129,6 +136,19 @@
     <div id="input-tokens"></div>
     <div id="analysis"></div>
     <div id="paradigm"></div>
+  <fieldset>
+    <legend>Show grammemes as:</legend>
+
+<input type="radio" id="option_ud" name="options" value="option_ud" checked>
+<label for="option_ud">Universal Dependencies</label><br>
+
+<input type="radio" id="option_int" name="options" value="option_int">
+<label for="option_int">OpenCorpora tags</label><br>
+
+<input type="radio" id="option_ext" name="options" value="option_ext">
+<label for="option_ext">Chosen language</label>
+    </div>
+</div>
 </div>
 
 <script type="module">
@@ -143,7 +163,7 @@
     };
     const alphanumeric = /^[\p{L}]+$/u;
 
-    const everythingContainer = document.getElementById('container');
+    const everythingContainer = document.getElementById('widget_container');
     const spinnerContainer = document.getElementById('spinner');
 
     const inputTokensContainer = document.getElementById('input-tokens');
@@ -153,6 +173,16 @@
     function splitText(text) {
         return text.split(/(\,|\.|\?|\!|\s|\(|\)|\[|\]|\{|\}|\"|\'|-)/).filter(Boolean);
     }
+    function getCheckedRadioButton() {
+        const radioButtons = document.getElementsByName('options');
+        for (const button of radioButtons) {
+            if (button.checked) {
+                return button.value;
+            }
+        }
+        return null;
+    }
+
     window.Az = {}
 
     // Add event listeners to language tabs
@@ -211,6 +241,7 @@
                 cell_show_all.addEventListener('click', function handleClick(event) {
 
                     paradigmContainer.innerHTML = "";
+                    const grammem_repr = getCheckedRadioButton();
                     if (data.formCnt) {
                         const table_para = document.createElement('table');
                         for (var formIdx = 0; formIdx < data.formCnt; formIdx++) {
@@ -219,7 +250,18 @@
                             const el_form = document.createElement('td');
                             const el_gram = document.createElement('td');
                             el_form.textContent = form.word;
-                            el_gram.textContent = form.tag.toString();
+                            if (grammem_repr == "option_int") {
+                                el_gram.textContent = form.tag.toString();
+                            }
+                            if (grammem_repr == "option_ext") {
+                                el_gram.textContent = form.tag.ext;
+                            }
+                            if (grammem_repr == "option_ud") {
+                                let obj = form.tag.ud_dict();
+                                el_gram.textContent = Object.entries(obj)
+                                    .map(([key, value]) => `${key}=${value}`)
+                                    .join('|');
+                            }
                             if (form.word === data.word) {
                               el_form.classList.add("matches");
                             }
@@ -261,18 +303,23 @@
             analysisContainer.style.display = 'block';
         }
     });
-    // TODO: don't do this
-    setTimeout(function () {
 
-       ['isv', 'rus', 'ukr'].forEach(lang => {
+    ['isv', 'rus', 'ukr'].forEach(lang => {
             window.loadDicts(lang, function(e) {
                             let Az = new AzClass();
                             window.Az[lang] = Az.init(e);
             })
         })
-      everythingContainer.style.display = 'flex';
-      spinnerContainer.style.display = 'none';
-    }, 500);
+    const intervalId = setInterval(() => {
+        const allInitialized = ['isv', 'rus', 'ukr'].every(lang => {
+            return window.Az[lang].initialized === true;
+        });
+        if (allInitialized) {
+            clearInterval(intervalId);
+            everythingContainer.style.display = 'flex';
+            spinnerContainer.classList.add('hidden');
+       }
+    }, 250);
 
 </script>
 </body>
