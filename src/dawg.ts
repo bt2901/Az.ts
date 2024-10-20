@@ -27,6 +27,11 @@ export class Dawg {
     public findAll(str: string, replaces?: string[][]) {
         const results = [
             this.getStr(str),
+            // XXX FIXME
+            // this doesn't work with multiple replacements and is inefficient computationslly
+            // should adapt the code from here: 
+            // https://github.com/denull/Az.js/blob/master/src/az.dawg.js#L211
+            // ("Follow a replacement path" part)
             ...this.getAllReplaces(str, replaces).map((rep) => this.getStr(rep)),
         ];
 

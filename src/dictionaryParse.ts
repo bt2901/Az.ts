@@ -1,13 +1,11 @@
 import { Tag } from './tag';
 
 export class DictionaryParse {
-    private paradigms: Uint16Array[];
-    private tags: any[];
-    private prefixes: string[];
-    private suffixes: string[];
+    private tags: { [key: number]: any };
+    private prefixes: { [key: number]: string };
+    private suffixes: { [key: number]: string };
 
     public word: string;
-    public paradigmIdx: number;
     public formIdx: number;
     public prefix: string = "";
     public suffix: string = "";
@@ -20,23 +18,20 @@ export class DictionaryParse {
     public score: number = 1;
 
     constructor(
-        paradigms: Uint16Array[],
-        tags: any[],
-        prefixes: string[],
-        suffixes: string[],
+        paradigm: Uint16Array,
+        tags: { [key: number]: any },
+        prefixes: { [key: number]: string },
+        suffixes: { [key: number]: string },
         word: string,
-        paradigmIdx: number,
         formIdx: number,
         prefix: string = "",
         suffix: string = "",
     ) {
-        this.paradigms = paradigms;
         this.tags = tags;
         this.prefixes = prefixes;
         this.suffixes = suffixes;
         this.word = word;
-        this.paradigmIdx = paradigmIdx;
-        this.paradigm = (this.paradigms![paradigmIdx] as Uint16Array);
+        this.paradigm = paradigm
         this.formIdx = formIdx;
         this.formCnt = this.paradigm.length / 3;
         this.tag = this.tags[(this.paradigm[this.formCnt + formIdx] as number)];
@@ -74,13 +69,13 @@ export class DictionaryParse {
     public inflect(tag: any, grammemes?: any): DictionaryParse | false {
         if (!grammemes && typeof tag === 'number') {
             // Inflect to specific formIdx
+            const newPrefix = (this.parser == 'PrefixUnknown')? this.prefix : this.getPref(tag);
             return new DictionaryParse(
-                this.paradigms,
+                this.paradigm,
                 this.tags,
                 this.prefixes,
                 this.suffixes,
-                this.getPref(tag) + this.base() + this.getSuf(tag),
-                this.paradigmIdx,
+                newPrefix + this.base() + this.getSuf(tag),
                 tag,
                 this.prefix,
                 this.suffix,
@@ -92,14 +87,14 @@ export class DictionaryParse {
             if (typeof newFormIdx === "undefined"){
                 throw new Error('Non-existing form');
             }
+            const newPrefix = (this.parser == 'PrefixUnknown')? this.prefix : this.getPref(formIdx);
             if (this.tags[newFormIdx].matches(tag, grammemes)) {
                 return new DictionaryParse(
-                    this.paradigms,
+                    this.paradigm,
                     this.tags,
                     this.prefixes,
                     this.suffixes,
-                    this.getPref(formIdx) + this.base() + this.getSuf(formIdx),
-                    this.paradigmIdx,
+                    newPrefix + this.base() + this.getSuf(formIdx),
                     formIdx,
                     this.prefix,
                     this.suffix,

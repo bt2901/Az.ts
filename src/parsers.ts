@@ -30,13 +30,31 @@ export function getParsers(
         var vars = [];
         for (var opts_entry of opts) {
             for (var entry of opts_entry![1]) {
+                const local_paradigm = (paradigms![entry[0]] as Uint16Array);
+                // const local_paradigm = paradigms![stats_entry[1]] as Uint16Array
+                const formCnt = local_paradigm.length / 3;
+
+                        const local_tags: {[key: number]: Tag; } = {};
+                        const local_prefixes: {[key: number]: string; } = {};
+                        const local_suffixes: {[key: number]: string; } = {};
+                        local_paradigm.slice(0, formCnt).forEach(x => {
+                            local_suffixes[x] = suffixes[x] ?? '';
+                        });
+                        local_paradigm.slice(formCnt, formCnt << 1).forEach(x => {
+                            if (!tags[x]) {
+                                throw new Error(`Tag not found for key ${x}`);
+                            }
+                            local_tags[x] = tags[x]!;
+                        });
+                        local_paradigm.slice(formCnt << 1, 3 * formCnt).forEach(x => {
+                            local_prefixes[x] = prefixes[x] ?? '';
+                        });
                 var w = new DictionaryParse(
-                    paradigms,
-                    tags,
-                    prefixes,
-                    suffixes,
+                    local_paradigm,
+                    local_tags,
+                    local_prefixes,
+                    local_suffixes,
                     opts_entry![0],
-                    entry[0],
                     entry[1],
                 );
                 if (config.ignoreCase || !w.tag.isCapitalized() || isCapitalized) {
@@ -153,13 +171,35 @@ export function getParsers(
                         if (stats_entry.length < 3) {
                           throw new Error('Corrupted data!');
                         }
+                        const local_paradigm = paradigms![stats_entry[1]] as Uint16Array
+                        const formCnt = local_paradigm.length / 3;
+                        const local_tags: {[key: number]: Tag; } = {};
+                        const local_prefixes: {[key: number]: string; } = {};
+                        const local_suffixes: {[key: number]: string; } = {};
+                        local_paradigm.slice(0, formCnt).forEach(x => {
+                            local_suffixes[x] = suffixes[x] ?? '';
+                        });
+                        local_paradigm.slice(formCnt, formCnt << 1).forEach(x => {
+                            if (!tags[x]) {
+                                throw new Error(`Tag not found for key ${x}`);
+                            }
+                            local_tags[x] = tags[x]!;
+                        });
+                        local_paradigm.slice(formCnt << 1, 3 * formCnt).forEach(x => {
+                            local_prefixes[x] = prefixes[x] ?? '';
+                        });
+
+                        //const [local_tags, local_prefixes, local_suffixes] = [0, formCnt, 2 * formCnt].map(
+                        //  (offset) =>
+                        //    Object.fromEntries(local_paradigm.slice(offset, offset + formCnt).map(
+                        //      (x) => [x, tags[x]]))
+                        //);
                         var parse = new DictionaryParse(
-                            paradigms,
-                            tags,
-                            prefixes,
-                            suffixes,
+                            local_paradigm,
+                            local_tags,
+                            local_prefixes,
+                            local_suffixes,
                             prefixes[i] + left + suffix,
-                            stats_entry[1],
                             stats_entry[2],
                             );
                         // Why there is even non-productive forms in suffix DAWGs?
