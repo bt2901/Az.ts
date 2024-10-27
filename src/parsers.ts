@@ -1,17 +1,17 @@
 import { DictionaryParse } from "./dictionaryParse";
-import { Dawg } from './dawg';
+import { DawgPayload } from 'dawgjs/dawg_payload';
 import { Tag } from './tag';
 import { Grammeme, Files, ParseResult, defaults } from './types';
 
 
 export function getParsers(
-    words: Dawg,
+    words: DawgPayload,
     paradigms: Uint16Array[],
     tags: Tag[],
     prefixes: string[],
     suffixes: string[],
-    predictionSuffixes: Dawg[],
-    replacements: string[][] | undefined,
+    predictionSuffixes: DawgPayload[],
+    replacements: { [key: string]: string } | undefined,
     particles: string[],
     knownPrefixes: string[],
 ) {
@@ -32,6 +32,7 @@ export function getParsers(
             for (var entry of opts_entry![1]) {
                 const local_paradigm = (paradigms![entry[0]] as Uint16Array);
                 // const local_paradigm = paradigms![stats_entry[1]] as Uint16Array
+
                 const formCnt = local_paradigm.length / 3;
 
                         const local_tags: {[key: number]: Tag; } = {};
@@ -157,7 +158,7 @@ export function getParsers(
                 // TODO: я просто взял и удалил (0, 0), так можно? откуда это взялось?
                 // var entries = predictionSuffixes[i]!.findAll(right, replacements, 0, 0);
                 var entries = predictionSuffixes[i]!.findAll(right, replacements);
-                if (!entries) {
+                if (!entries || !entries.length) {
                     continue;
                 }
 
@@ -169,6 +170,7 @@ export function getParsers(
 
                     for (const stats_entry of stats) {
                         if (stats_entry.length < 3) {
+                          console.log(stats_entry)
                           throw new Error('Corrupted data!');
                         }
                         const local_paradigm = paradigms![stats_entry[1]] as Uint16Array

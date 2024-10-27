@@ -1,4 +1,4 @@
-import { Dawg } from './dawg';
+import { DawgPayload } from 'dawgjs/dawg_payload';
 import { Tag } from './tag';
 import { Grammeme, Files, ParseResult, defaults } from './types';
 import { getParsers } from './parsers';
@@ -10,10 +10,10 @@ export class AzClass {
     private knownPrefixes: string[] = [];
     private prefixes: string[] = [];
     private particles: string[] = [];
-    private replacements?: string[][];
-    private words!: Dawg;
-    private predictionSuffixes: Dawg[] = [];
-    private probabilities?: Dawg;
+    private replacements?: { [key: string]: string };
+    private words!: DawgPayload;
+    private predictionSuffixes: DawgPayload[] = [];
+    private probabilities?: DawgPayload;
     private grammemes: { [key: string]: Grammeme } = {};
 
     private tags: Tag[] = [];
@@ -27,18 +27,26 @@ export class AzClass {
         this.knownPrefixes = files['config.json'].knownPrefixes;
         this.prefixes = files['config.json'].prefixes;
         this.particles = files['config.json'].particles;
-        this.replacements = files['config.json'].replacements;
-
-        this.words = new Dawg(files['words.dawg'], 'words');
+        let readReplacements: string[][] = files['config.json'].replacements;
+        let newReplacements: { [key: string]: string } = {};
+           this.replacements = {};
+        // if (newReplacements.constructor.name === "Array") {
+        readReplacements.forEach(x => {
+                            newReplacements[x[0] as string] = x[1] ?? '?';
+                       });
+        //} else {
+        this.replacements = newReplacements;
+        //}
+        this.words = new DawgPayload(files['words.dawg'], 'words');
 
         this.predictionSuffixes = new Array(3);
 
         for (let prefix = 0; prefix < 3; prefix++) {
-            this.predictionSuffixes[prefix] = new Dawg(files[`prediction-suffixes-${prefix}.dawg`], 'probs');
+            this.predictionSuffixes[prefix] = new DawgPayload(files[`prediction-suffixes-${prefix}.dawg`], 'probs');
         }
 
         if (files['p_t_given_w.intdawg']) {
-            this.probabilities = new Dawg(files['p_t_given_w.intdawg'], 'int');
+            this.probabilities = new DawgPayload(files['p_t_given_w.intdawg'], 'int');
         }
 
         this.grammemes = (files['grammemes.json'] || []).reduce((all: { [key: string]: Grammeme }, [internal, parent, external, externalFull]: string[]) => {
